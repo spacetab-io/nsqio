@@ -7,11 +7,10 @@ from .connection import create_connection
 from .consts import TOUCH, REQ, FIN, RDY, CLS, MPUB, PUB, SUB, AUTH
 
 
-@asyncio.coroutine
-def create_nsq(host='127.0.0.1', port=4150, loop=None, queue=None,
-               heartbeat_interval=30000, feature_negotiation=True,
-               tls_v1=False, snappy=False, deflate=False, deflate_level=6,
-               sample_rate=0):
+async def create_nsq(host='127.0.0.1', port=4150, loop=None, queue=None,
+                     heartbeat_interval=30000, feature_negotiation=True,
+                     tls_v1=False, snappy=False, deflate=False, deflate_level=6,
+                     sample_rate=0):
     # TODO: add parameters type and value validation
     queue = queue or asyncio.Queue(loop=loop)
     conn = Nsq(host=host, port=port, queue=queue,
@@ -20,16 +19,16 @@ def create_nsq(host='127.0.0.1', port=4150, loop=None, queue=None,
                tls_v1=tls_v1, snappy=snappy, deflate=deflate,
                deflate_level=deflate_level,
                sample_rate=sample_rate, loop=loop)
-    yield from conn.connect()
+    await conn.connect()
     return conn
 
 
 class Nsq:
 
     def __init__(self, host='127.0.0.1', port=4150, loop=None, queue=None,
-               heartbeat_interval=30000, feature_negotiation=True,
-               tls_v1=False, snappy=False, deflate=False, deflate_level=6,
-               sample_rate=0):
+                 heartbeat_interval=30000, feature_negotiation=True,
+                 tls_v1=False, snappy=False, deflate=False, deflate_level=6,
+                 sample_rate=0):
         # TODO: add parameters type and value validation
         self._config = {
             "deflate": deflate,
@@ -40,7 +39,6 @@ class Nsq:
             "heartbeat_interval": heartbeat_interval,
             'feature_negotiation': feature_negotiation,
         }
-
 
         self._host = host
         self._port = port
@@ -56,14 +54,12 @@ class Nsq:
         self._on_rdy_changed_cb = None
         self._last_rdy = 0
 
-
-    @asyncio.coroutine
-    def connect(self):
-        self._conn = yield from create_connection(self._host, self._port,
-                                                  self._queue, loop=self._loop)
+    async def connect(self):
+        self._conn = await create_connection(self._host, self._port,
+                                             self._queue, loop=self._loop)
 
         self._conn._on_message = self._on_message
-        yield from self._conn.identify(**self._config)
+        await self._conn.identify(**self._config)
         self._status = consts.CONNECTED
 
     def _on_message(self, msg):
@@ -92,25 +88,22 @@ class Nsq:
     def last_message(self):
         return self._last_message
 
-    @asyncio.coroutine
-    def reconnect(self):
+    async def reconnect(self):
         timeout_generator = retry_iterator(init_delay=0.1, max_delay=10.0)
         while not (self._status == consts.CONNECTED):
             try:
-                yield from self.connect()
+                await self.connect()
             except ConnectionError:
                 logger.error("Can not connect to: {}:{} ".format(
                     self._host, self._port))
             else:
                 self._status = consts.CONNECTED
             t = next(timeout_generator)
-            yield from asyncio.sleep(t, loop=self._loop)
+            await asyncio.sleep(t, loop=self._loop)
 
-
-    @asyncio.coroutine
-    def execute(self, command, *args, data=None):
+    async def execute(self, command, *args, data=None):
         if self._state <= consts.CONNECTED and self._reconnect:
-            yield from self.reconnect()
+            await self.reconnect()
 
         response = self._conn.execute(command, *args, data=data)
         return response
@@ -121,40 +114,36 @@ class Nsq:
 
     def wait_messages(self):
         while True:
-            future = asyncio.async(self._queue.get(), loop=self._loop)
+            future = asyncio.ensure_future(self._queue.get(), loop=self._loop)
             yield future
 
-    @asyncio.coroutine
-    def auth(self, secret):
+    async def auth(self, secret):
         """
 
         :param secret:
         :return:
         """
-        return (yield from self._conn.execute(AUTH, data=secret))
+        return (await self._conn.execute(AUTH, data=secret))
 
-    @asyncio.coroutine
-    def sub(self, topic, channel):
+    async def sub(self, topic, channel):
         """
 
         :param topic:
         :param channel:
         :return:
         """
-        return (yield from self._conn.execute(SUB, topic, channel))
+        return (await self._conn.execute(SUB, topic, channel))
 
-    @asyncio.coroutine
-    def pub(self, topic, message):
+    async def pub(self, topic, message):
         """
 
         :param topic:
         :param message:
         :return:
         """
-        return (yield from self._conn.execute(PUB, topic, data=message))
+        return (await self._conn.execute(PUB, topic, data=message))
 
-    @asyncio.coroutine
-    def mpub(self, topic, message, *messages):
+    async def mpub(self, topic, message, *messages):
         """
 
         :param topic:
@@ -163,10 +152,9 @@ class Nsq:
         :return:
         """
         msgs = [message] + list(messages)
-        return (yield from self._conn.execute(MPUB, topic, data=msgs))
+        return (await self._conn.execute(MPUB, topic, data=msgs))
 
-    @asyncio.coroutine
-    def rdy(self, count):
+    async def rdy(self, count):
         """
 
         :param count:
@@ -177,43 +165,39 @@ class Nsq:
 
         self._last_rdy = count
         self.rdy_state = count
-        return (yield from self._conn.execute(RDY, count))
+        return (await self._conn.execute(RDY, count))
 
-    @asyncio.coroutine
-    def fin(self, message_id):
+    async def fin(self, message_id):
         """
 
         :param message_id:
         :return:
         """
-        return (yield from self._conn.execute(FIN, message_id))
+        return (await self._conn.execute(FIN, message_id))
 
-    @asyncio.coroutine
-    def req(self, message_id, timeout):
+    async def req(self, message_id, timeout):
         """
 
         :param message_id:
         :param timeout:
         :return:
         """
-        return (yield from self._conn.execute(REQ, message_id, timeout))
+        return (await self._conn.execute(REQ, message_id, timeout))
 
-    @asyncio.coroutine
-    def touch(self, message_id):
+    async def touch(self, message_id):
         """
 
         :param message_id:
         :return:
         """
-        return (yield from self._conn.execute(TOUCH, message_id))
+        return (await self._conn.execute(TOUCH, message_id))
 
-    @asyncio.coroutine
-    def cls(self):
+    async def cls(self):
         """
 
         :return:
         """
-        yield from self._conn.execute(CLS)
+        await self._conn.execute(CLS)
         self.close()
 
     def close(self):

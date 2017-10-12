@@ -23,14 +23,13 @@ class NsqHTTPConnection:
     def close(self):
         self._connector.close()
 
-    @asyncio.coroutine
-    def perform_request(self, method, url, params, body):
+    async def perform_request(self, method, url, params, body):
         _body = _convert_to_str(body) if body else body
         url = self._base_url + url
-        resp = yield from self._request(method, url, params=params,
-                                        data=_body, loop=self._loop,
-                                        connector=self._connector)
-        resp_body = yield from resp.text()
+        resp = await self._request(method, url, params=params,
+                                   data=_body, loop=self._loop,
+                                   connector=self._connector)
+        resp_body = await resp.text()
         try:
             response = json.loads(resp_body)
         except ValueError:

@@ -25,7 +25,7 @@ _converters_to_bytes_map = {
     str: lambda val: val.encode('utf-8'),
     int: lambda val: str(val).encode('utf-8'),
     float: lambda val: str(val).encode('utf-8'),
-    }
+}
 
 
 _converters_to_str_map = {
@@ -34,7 +34,7 @@ _converters_to_str_map = {
     bytes: lambda val: val.decode('utf-8'),
     int: lambda val: str(val),
     float: lambda val: str(val),
-    }
+}
 
 
 def _convert_to_bytes(value):
@@ -78,7 +78,8 @@ def retry_iterator(init_delay=0.1, max_delay=10.0, factor=2.7182818284590451,
     while not max_retries or retries < max_retries:
         retries += 1
         delay *= factor
-        delay = random.normalvariate(delay, delay * jitter) if jitter else delay
+        delay = random.normalvariate(
+            delay, delay * jitter) if jitter else delay
         delay = min(delay, max_delay) if max_delay else delay
         yield delay
     else:
@@ -112,30 +113,26 @@ class RdyControl:
         for conn in self._connections.values():
             conn._on_rdy_changed_cb = self.rdy_changed
 
-
     def rdy_changed(self, conn_id):
         self._cmd_queue.put_nowait((CHANGE_CONN_RDY, (conn_id,)))
 
     def redistribute(self):
         self._cmd_queue.put_nowait((REDISTRIBUTE, ()))
 
-
-    @asyncio.coroutine
-    def _distributor(self):
+    async def _distributor(self):
         while self._is_working:
-            cmd, args = yield from self._cmd_queue.get()
+            cmd, args = await self._cmd_queue.get()
             if cmd == REDISTRIBUTE:
-                yield from self._redistribute_rdy_state()
+                await self._redistribute_rdy_state()
             elif cmd == CHANGE_CONN_RDY:
-                yield from self._update_rdy(*args)
+                await self._update_rdy(*args)
             else:
                 RuntimeError("Should never be here")
 
     def remove_connection(self, conn):
         self._connections.pop(conn.id)
 
-    @asyncio.coroutine
-    def _redistribute_rdy_state(self):
+    async def _redistribute_rdy_state(self):
         # We redistribute RDY counts in a few cases:
         #
         # 1. our # of connections exceeds our configured max_in_flight
@@ -157,19 +154,19 @@ class RdyControl:
             if (time.time() - conn.last_message) < self._idle_timeout:
                 continue
 
-            yield from conn.rdy(0)
+            await conn.rdy(0)
         distributed_rdy = sum(c.rdy_state for c in connections)
         not_distributed_rdy = self._max_in_flight - distributed_rdy
 
         sample = min(not_distributed_rdy, len(connections))
         conns = random.sample(connections, sample)
         for conn in conns:
-            yield from conn.rdy(1)
+            await conn.rdy(1)
 
-    @asyncio.coroutine
-    def _update_rdy(self, conn_id):
+    async def _update_rdy(self, conn_id):
         conn = self._connections[conn_id]
         if conn.rdy_state > int(conn._last_rdy * 0.25):
             return
-        rdy_state = max(1, self._max_in_flight / max(1, len(self._connections)))
-        yield from conn.rdy(int(rdy_state))
+        rdy_state = max(1, self._max_in_flight /
+                        max(1, len(self._connections)))
+        await conn.rdy(int(rdy_state))

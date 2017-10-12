@@ -1,77 +1,22 @@
-aionsq (work in progress)
+asyncnsq (work in progress,仍然开发中)
 =========================
 
-asyncio (PEP 3156) nsq_ (message queue) client.
+implement python3.5+  async/await syntax support
+提供python3.5+  async/await 语法支持。 原项目，支持yield from 生成器语法。
 
+this project is forked from  jettify/aionsq, he is the original author
+本项目fork了 jettify/aionsq， 他是原作者，但是很久没有更新了。
 
 Usage examples
 --------------
-
-Simple low-level interface:
-
-.. code:: python
-
-    import asyncio
-    from aionsq.connection import create_connection
-
-
-    def main():
-
-        loop = asyncio.get_event_loop()
-        @asyncio.coroutine
-        def go():
-            # create tcp connection
-            nsq = yield from create_connection(port=4150, loop=loop)
-            # publish b'test_msg' to the topic: b'foo'
-            ok = yield from nsq.execute(b'PUB', b'foo', data=b'test_msg')
-            # subscribe to the b'foo' topic and b'bar' channel
-            yield from nsq.execute(b'SUB', b'foo', b'bar')
-            # tell nsqd that we are reade receive 1 message
-            yield from nsq.execute(b'RDY', b'1')
-            # wait for message
-            msg = yield from nsq._msq_queue.get()
-            print(msg)
-            # acknowledge message
-            yield from nsq.execute(b'FIN', b'1')
-
-        loop.run_until_complete(go())
-
-    if __name__ == '__main__':
-        main()
-
-
-High-level interface for one nsq connection:
-
-.. code:: python
-
-    import asyncio
-    from aionsq.nsq import create_nsq
-
-
-    def main():
-
-        loop = asyncio.get_event_loop()
-        @asyncio.coroutine
-        def go():
-            nsq = yield from create_nsq(host='127.0.0.1', port=4150, loop=loop)
-            yield from nsq.pub(b'foo', b'msg foo')
-            yield from nsq.sub(b'foo', b'bar')
-            yield from nsq.rdy(1)
-            msg = yield from nsq.wait_messages()
-            print(msg)
-            yield from msg.fin()
-        loop.run_until_complete(go())
-
-
-    if __name__ == '__main__':
-        main()
+you can refer from examples.
+你可以查看examples文件夹中的例子。
 
 
 Requirements
 ------------
 
-* Python_ 3.3+
-* asyncio_ or Python_ 3.4+
+* Python_ 3.5+
 * nsq_
 
 
@@ -81,5 +26,4 @@ License
 The aionsq is offered under MIT license.
 
 .. _Python: https://www.python.org
-.. _asyncio: https://pypi.python.org/pypi/asyncio
 .. _nsq: http://nsq.io

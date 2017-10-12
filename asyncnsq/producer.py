@@ -50,8 +50,8 @@ class NsqTCPProducer(BaseNsqProducer):
 
     def connect(self):
         for host, port in self._endpoints:
-            conn = yield from create_nsq(host=host, port=port, loop=self._loop,
-                                         **self._conn_config)
+            conn = await create_nsq(host=host, port=port, loop=self._loop,
+                                    **self._conn_config)
             self._connections[conn.id] = conn
 
     def publish(self, topic, message):
@@ -62,7 +62,7 @@ class NsqTCPProducer(BaseNsqProducer):
         :return:
         """
         conn = self._get_connection()
-        return (yield from conn.pub(topic, message))
+        return (await conn.pub(topic, message))
 
     def mpublish(self, topic, message, *messages):
         """XXX
@@ -73,16 +73,15 @@ class NsqTCPProducer(BaseNsqProducer):
         :return:
         """
         conn = self._get_connection()
-        return (yield from conn.mpub(topic, message, *messages))
+        return (await conn.mpub(topic, message, *messages))
 
     def close(self):
         for conn in self._connections:
             conn.close()
 
 
-@asyncio.coroutine
-def create_producer(nsqd_tcp_addresses, conn_config,
-                    selector_factory=RandomSelector, loop=None):
+async def create_producer(nsqd_tcp_addresses, conn_config,
+                          selector_factory=RandomSelector, loop=None):
     """XXX
 
     :param nsqd_tcp_addresses:
@@ -95,7 +94,5 @@ def create_producer(nsqd_tcp_addresses, conn_config,
     prod = NsqTCPProducer(nsqd_tcp_addresses, conn_config,
                           selector_factory=selector_factory,
                           loop=loop)
-    yield from prod.connect()
+    await prod.connect()
     return prod
-
-

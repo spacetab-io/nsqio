@@ -23,8 +23,7 @@ class NsqHTTPProducer(BaseNsqProducer):
             conn = Nsqd(host=host, port=port, loop=self._loop)
             self._connections[conn.endpoint] = conn
 
-    @asyncio.coroutine
-    def publish(self, topic, message):
+    async def publish(self, topic, message):
         """XXX
 
         :param topic:
@@ -32,10 +31,9 @@ class NsqHTTPProducer(BaseNsqProducer):
         :return:
         """
         conn = self._get_connection()
-        return (yield from conn.pub(topic, message))
+        return (await conn.pub(topic, message))
 
-    @asyncio.coroutine
-    def mpublish(self, topic, message, *messages):
+    async def mpublish(self, topic, message, *messages):
         """XXX
 
         :param topic:
@@ -44,15 +42,15 @@ class NsqHTTPProducer(BaseNsqProducer):
         :return:
         """
         conn = self._get_connection()
-        return (yield from conn.mpub(topic, message, *messages))
+        return (await conn.mpub(topic, message, *messages))
 
     def close(self):
         for conn in self._connections:
             conn.close()
 
-@asyncio.coroutine
-def create_http_producer(nsqd_http_addresses, selector_factory=RandomSelector,
-                         loop=None):
+
+async def create_http_producer(nsqd_http_addresses, selector_factory=RandomSelector,
+                               loop=None):
     """XXX
 
     :param nsqd_tcp_addresses:

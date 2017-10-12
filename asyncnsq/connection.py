@@ -11,10 +11,9 @@ from .exceptions import ProtocolError, make_error
 from .protocol import Reader, DeflateReader, SnappyReader
 
 
-@asyncio.coroutine
-def create_connection(host='localhost', port=4151, queue=None, loop=None):
+async def create_connection(host='localhost', port=4151, queue=None, loop=None):
     """XXX"""
-    reader, writer = yield from asyncio.open_connection(
+    reader, writer = await asyncio.open_connection(
         host, port, loop=loop)
     conn = NsqConnection(reader, writer, host, port, queue=queue, loop=loop)
     conn.connect()
@@ -101,11 +100,10 @@ class NsqConnection:
         """Close connection."""
         self._do_close()
 
-    @asyncio.coroutine
-    def identify(self, **config):
+    async def identify(self, **config):
         # TODO: add config validator
         data = json.dumps(config)
-        resp = yield from self.execute(
+        resp = await self.execute(
             b'IDENTIFY', data=data, cb=self._start_upgrading)
         if resp in (b'OK', 'OK'):
             self._finish_upgrading()
@@ -113,7 +111,7 @@ class NsqConnection:
         resp_config = json.loads(resp.decode('utf-8'))
         fut = None
         if resp_config.get('tls_v1'):
-            yield from self._upgrade_to_tls()
+            await self._upgrade_to_tls()
 
         if resp_config.get('snappy'):
             fut = self._upgrade_to_snappy()
@@ -121,7 +119,7 @@ class NsqConnection:
             fut = self._upgrade_to_deflate()
         self._finish_upgrading()
         if fut:
-            ok = yield from fut
+            ok = await fut
             assert ok == b'OK'
         return resp
 
@@ -142,8 +140,7 @@ class NsqConnection:
         nop = self._parser.encode_command(b'NOP')
         self._writer.write(nop)
 
-    @asyncio.coroutine
-    def _upgrade_to_tls(self):
+    async def _upgrade_to_tls(self):
         self._reader_task.cancel()
         transport = self._writer.transport
         transport.pause_reading()
@@ -152,10 +149,10 @@ class NsqConnection:
             raise RuntimeError("Transport does not expose socket instance")
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
 
-        self._reader, self._writer = yield from asyncio.open_connection(
+        self._reader, self._writer = await asyncio.open_connection(
             sock=raw_sock, ssl=ssl_context, loop=self._loop,
             server_hostname=self._host)
-        bin_ok = yield from self._reader.readexactly(10)
+        bin_ok = await self._reader.readexactly(10)
         if bin_ok != consts.BIN_OK:
             raise RuntimeError('Upgrade to TLS failed, got: {}'.format(bin_ok))
         self._reader_task = asyncio.Task(self._read_data(), loop=self._loop)
@@ -177,13 +174,12 @@ class NsqConnection:
         self._cmd_waiters.append((fut, None))
         return fut
 
-    @asyncio.coroutine
-    def _read_data(self):
+    async def _read_data(self):
         """Response reader task."""
         is_canceled = False
         while not self._reader.at_eof():
             try:
-                data = yield from self._reader.read(consts.MAX_CHUNK_SIZE)
+                data = await self._reader.read(consts.MAX_CHUNK_SIZE)
             except asyncio.CancelledError:
                 is_canceled = True
                 logger.error('Task is canceled')

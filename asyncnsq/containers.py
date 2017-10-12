@@ -23,20 +23,18 @@ class NsqMessage(BaseMessage):
         """True if message has been processed: finished or re-queued."""
         return self._is_processed
 
-    @asyncio.coroutine
-    def fin(self):
+    async def fin(self):
         """Finish a message (indicate successful processing)
 
         :raises RuntimeWarning: in case message was processed earlier.
         """
         if self._is_processed:
             raise RuntimeWarning("Message has already been processed")
-        resp = (yield from self.conn.execute(FIN, self.message_id))
+        resp = (await self.conn.execute(FIN, self.message_id))
         self._is_processed = True
         return resp
 
-    @asyncio.coroutine
-    def req(self, timeout=10):
+    async def req(self, timeout=10):
         """Re-queue a message (indicate failure to process)
 
         :param timeout: ``int`` configured max timeout  0 is a special case
@@ -45,15 +43,14 @@ class NsqMessage(BaseMessage):
         """
         if self._is_processed:
             raise RuntimeWarning("Message has already been processed")
-        resp = yield from self.conn.execute(REQ, self.message_id, timeout)
+        resp = await self.conn.execute(REQ, self.message_id, timeout)
         self._is_processed = True
         return resp
 
-    @asyncio.coroutine
-    def touch(self):
+    async def touch(self):
         """Reset the timeout for an in-flight message.
         :raises RuntimeWarning: in case message was processed earlier.
         """
         if self._is_processed:
             raise RuntimeWarning("Message has already been processed")
-        return (yield from self.conn.execute(TOUCH, self.message_id))
+        return (await self.conn.execute(TOUCH, self.message_id))
