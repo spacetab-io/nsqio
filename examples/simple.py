@@ -1,5 +1,5 @@
 import asyncio
-from aionsq.connection import create_connection
+from asyncnsq.connection import create_connection
 
 
 def main():

@@ -1,5 +1,5 @@
 import asyncio
-from aionsq.nsq import create_nsq
+from asyncnsq.nsq import create_nsq
 
 
 def main():

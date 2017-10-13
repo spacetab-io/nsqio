@@ -1,5 +1,5 @@
 from ._testutils import run_until_complete, BaseTest
-from aionsq.http.rest_producer import  create_http_producer
+from asyncnsq.http.rest_producer import  create_http_producer
 
 
 class NsqHTTPProducerTest(BaseTest):

@@ -2,9 +2,9 @@ import asyncio
 import random
 from collections import deque
 import time
-from aionsq.http import NsqLookupd
-from aionsq.nsq import create_nsq
-from aionsq.utils import RdyControl
+from asyncnsq.http import NsqLookupd
+from asyncnsq.nsq import create_nsq
+from asyncnsq.utils import RdyControl
 
 
 class NsqConsumer:

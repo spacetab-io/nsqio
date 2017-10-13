@@ -1,5 +1,5 @@
 from ._testutils import run_until_complete, BaseTest
-from aionsq.http.nsqd import Nsqd
+from asyncnsq.http.nsqd import Nsqd
 
 
 class NsqdTest(BaseTest):

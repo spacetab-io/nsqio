@@ -1,5 +1,5 @@
 from ._testutils import run_until_complete, BaseTest
-from aionsq.producer import create_producer
+from asyncnsq.producer import create_producer
 
 
 class NsqTCPProducerTest(BaseTest):

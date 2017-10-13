@@ -1,5 +1,5 @@
 from ._testutils import run_until_complete, BaseTest
-from aionsq.http.lookupd import NsqLookupd
+from asyncnsq.http.lookupd import NsqLookupd
 
 
 class NsqLookupdTest(BaseTest):

@@ -1,6 +1,6 @@
 import unittest
-from aionsq.exceptions import ProtocolError
-from aionsq.protocol import Reader
+from asyncnsq.exceptions import ProtocolError
+from asyncnsq.protocol import Reader
 
 
 class ParserTest(unittest.TestCase):

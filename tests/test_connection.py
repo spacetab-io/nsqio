@@ -1,8 +1,8 @@
 import asyncio
 from ._testutils import run_until_complete, BaseTest
-from aionsq.connection import create_connection, NsqConnection
-from aionsq.http import Nsqd
-from aionsq.protocol import Reader, SnappyReader, DeflateReader
+from asyncnsq.connection import create_connection, NsqConnection
+from asyncnsq.http import Nsqd
+from asyncnsq.protocol import Reader, SnappyReader, DeflateReader
 
 
 class NsqConnectionTest(BaseTest):

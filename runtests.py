@@ -1,5 +1,5 @@
 
-"""Run aionsq unittests.
+"""Run asyncnsq unittests.
 
 Usage:
   python3 runtests.py [flags] [pattern] ...
@@ -241,7 +241,7 @@ def runtests():
 
     if args.coverage:
         cov = coverage.coverage(branch=True,
-                                source=['aionsq'],
+                                source=['asyncnsq'],
                                 )
         cov.start()
 

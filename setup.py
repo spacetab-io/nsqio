@@ -13,7 +13,7 @@ if PY_VER >= (3, 4):
 elif PY_VER >= (3, 3):
     install_requires.append('asyncio')
 else:
-    raise RuntimeError("aionsq doesn't support Python version prior 3.3")
+    raise RuntimeError("asyncnsq doesn't support Python version prior 3.3")
 
 
 def read(*parts):
@@ -24,14 +24,14 @@ def read(*parts):
 def read_version():
     regexp = re.compile(r"^__version__\W*=\W*'([\d.abrc]+)'")
     init_py = os.path.join(os.path.dirname(__file__),
-                           'aionsq', '__init__.py')
+                           'asyncnsq', '__init__.py')
     with open(init_py) as f:
         for line in f:
             match = regexp.match(line)
             if match is not None:
                 return match.group(1)
         else:
-            raise RuntimeError('Cannot find version in aionsq/__init__.py')
+            raise RuntimeError('Cannot find version in asyncnsq/__init__.py')
 
 
 classifiers = [

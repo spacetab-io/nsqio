@@ -1,9 +1,9 @@
 import asyncio
 from ._testutils import run_until_complete, BaseTest
-from aionsq.connection import create_connection, NsqConnection
-from aionsq.consumer import NsqConsumer
-from aionsq.http import Nsqd
-from aionsq.nsq import create_nsq
+from asyncnsq.connection import create_connection, NsqConnection
+from asyncnsq.consumer import NsqConsumer
+from asyncnsq.http import Nsqd
+from asyncnsq.nsq import create_nsq
 
 
 class NsqTest(BaseTest):
