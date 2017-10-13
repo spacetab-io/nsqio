@@ -22,6 +22,16 @@ Requirements
 * Python_ 3.5+
 * nsq_
 
+* python-snappy
+    1. ubuntu:
+    - sudo apt-get install libsnappy-dev
+    - pip install python-snappy
+    2. centos:
+    - sudo yum install snappy-devel
+    - pip install python-snappy
+    3. mac:
+    - brew install snappy # snappy library from Google
+    - CPPFLAGS="-I/usr/local/include -L/usr/local/lib" pip install python-snappy
 
 License
 -------
