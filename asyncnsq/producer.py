@@ -48,13 +48,13 @@ class NsqTCPProducer(BaseNsqProducer):
         conn = self._selector.select(conn_list)
         return conn
 
-    def connect(self):
+    async def connect(self):
         for host, port in self._endpoints:
             conn = await create_nsq(host=host, port=port, loop=self._loop,
                                     **self._conn_config)
             self._connections[conn.id] = conn
 
-    def publish(self, topic, message):
+    async def publish(self, topic, message):
         """XXX
 
         :param topic:
@@ -64,7 +64,7 @@ class NsqTCPProducer(BaseNsqProducer):
         conn = self._get_connection()
         return (await conn.pub(topic, message))
 
-    def mpublish(self, topic, message, *messages):
+    async def mpublish(self, topic, message, *messages):
         """XXX
 
         :param topic:
