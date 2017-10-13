@@ -19,8 +19,8 @@ you can refer from examples.
 Requirements
 ------------
 
-* Python_ 3.5+
-* nsq_
+* Python_ 3.5+  https://www.python.org
+* nsq_  http://nsq.io
 
 * python-snappy
     1. ubuntu:
@@ -36,7 +36,4 @@ Requirements
 License
 -------
 
-The aionsq is offered under MIT license.
-
-.. _Python: https://www.python.org
-.. _nsq: http://nsq.io
+The asyncnsq is offered under MIT license.
