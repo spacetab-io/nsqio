@@ -5,9 +5,9 @@ implement python3.5+  async/await syntax support
 
 提供python3.5+  async/await 语法支持。 原项目，支持yield from 生成器语法。
 
-this project is forked from  jettify/asyncnsq, he is the original author
+this project is forked from  jettify/aionsq, he is the original author
 
-本项目fork了 jettify/asyncnsq， 他是原作者，但是很久没有更新了。
+本项目fork了 jettify/aionsq， 他是原作者，但是很久没有更新了。
 
 Usage examples
 --------------
