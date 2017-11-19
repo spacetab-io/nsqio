@@ -7,6 +7,12 @@ Latest Updates
 
 support dpub 
 
+
+Install
+-------------
+
+pip install asyncnsq
+
 Usage examples
 --------------
 
