@@ -29,6 +29,7 @@ CLS = b'CLS'
 AUTH = b'AUTH'
 SUB = b'SUB'
 PUB = b'PUB'
+DPUB = b'DPUB'
 
 # connection status
 CLOSED = 0

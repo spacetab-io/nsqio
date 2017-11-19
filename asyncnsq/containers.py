@@ -30,7 +30,7 @@ class NsqMessage(BaseMessage):
         """
         if self._is_processed:
             raise RuntimeWarning("Message has already been processed")
-        resp = (await self.conn.execute(FIN, self.message_id))
+        resp = await self.conn.execute(FIN, self.message_id)
         self._is_processed = True
         return resp
 
@@ -53,4 +53,4 @@ class NsqMessage(BaseMessage):
         """
         if self._is_processed:
             raise RuntimeWarning("Message has already been processed")
-        return (await self.conn.execute(TOUCH, self.message_id))
+        return await self.conn.execute(TOUCH, self.message_id)

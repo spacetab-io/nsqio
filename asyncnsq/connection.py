@@ -179,7 +179,8 @@ class NsqConnection:
         is_canceled = False
         while not self._reader.at_eof():
             try:
-                data = await self._reader.read(consts.MAX_CHUNK_SIZE)
+                data = await self._reader.read(1024)
+                # print('\n\n', 'socket response data', data)
             except asyncio.CancelledError:
                 is_canceled = True
                 logger.error('Task is canceled')

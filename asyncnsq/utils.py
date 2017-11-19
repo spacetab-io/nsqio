@@ -2,9 +2,26 @@ import asyncio
 import random
 import re
 import time
+from urllib.parse import urlparse
+
 
 TOPIC_NAME_RE = re.compile(r'^[\.a-zA-Z0-9_-]+$')
 CHANNEL_NAME_RE = re.compile(r'^[\.a-zA-Z0-9_-]+(#ephemeral)?$')
+
+
+def get_host_and_port(host):
+    host_parsed = urlparse(host)
+    if host_parsed.scheme == 'tcp':
+        result = host_parsed.netloc
+    elif host_parsed.scheme == '':
+        result = host_parsed.path
+    else:
+        result = host
+    result = result.split(':')
+    if len(result) == 2:
+        return result[0], result[-1]
+    else:
+        return result[0], None
 
 
 def valid_topic_name(topic):
@@ -112,6 +129,9 @@ class RdyControl:
         self._connections = connections
         for conn in self._connections.values():
             conn._on_rdy_changed_cb = self.rdy_changed
+
+    def add_connection(self, connection):
+        connection._on_rdy_changed_cb = self.rdy_changed
 
     def rdy_changed(self, conn_id):
         self._cmd_queue.put_nowait((CHANGE_CONN_RDY, (conn_id,)))

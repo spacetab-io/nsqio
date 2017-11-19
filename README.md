@@ -1,20 +1,54 @@
 asyncnsq (work in progress,仍然开发中)
 =========================
+asyncnsq with python3.6 await/async supported
 
-implement python3.5+  async/await syntax support
+Latest Updates
+--------------
 
-提供python3.5+  async/await 语法支持。 原项目，支持yield from 生成器语法。
-
-this project is forked from  jettify/aionsq, he is the original author
-
-本项目fork了 jettify/aionsq， 他是原作者，但是很久没有更新了。
+support dpub 
 
 Usage examples
 --------------
-you can refer from examples.
 
-你可以查看examples文件夹中的例子。
+All you need is a loop, then enjoy
 
+Consumer:
+
+    loop = asyncio.get_event_loop()
+
+    async def go():
+        nsq_consumer = await create_nsq_consumer(host='tcp://127.0.0.1:4150',
+                                                 max_in_flight=200)
+        await nsq_consumer.subscribe('test_async_nsq', 'nsq')
+        for waiter in nsq_consumer.wait_messages():
+            message = await waiter
+            print(message.body)
+            await message.fin()
+
+    loop.run_until_complete(go())
+
+Producer:
+
+    loop = asyncio.get_event_loop()
+
+    async def go():
+        nsq_producer = await create_nsq_producer(host='127.0.0.1', port=4150,
+                                                 heartbeat_interval=30000,
+                                                 feature_negotiation=True,
+                                                 tls_v1=True,
+                                                 snappy=False,
+                                                 deflate=False,
+                                                 deflate_level=0,
+                                                 loop=loop)
+        for i in range(10):
+            await nsq_producer.pub('test_async_nsq', 'test_async_nsq:{i}'.format(i=i))
+            await nsq_producer.dpub('test_async_nsq', i * 1000,
+                                    'test_delay_async_nsq:{i}'.format(i=i))
+    loop.run_until_complete(go())
+
+you can use host like 'tcp://127.0.0.1:4150' or '127.0.0.1' with port=4150
+
+As for now, only single nsqd addr supported.
 
 Requirements
 ------------

@@ -68,6 +68,7 @@ class BaseCompressReader(BaseReader):
 
     def encode_command(self, cmd, *args, data=None):
         cmd = self._parser.encode_command(cmd, *args, data=data)
+        # print(cmd)
         return self.compress(cmd)
 
 
