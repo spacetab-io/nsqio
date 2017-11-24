@@ -18,7 +18,7 @@ def main():
                                                  deflate=False,
                                                  deflate_level=0,
                                                  loop=loop)
-        for i in range(10):
+        for i in range(100):
             await nsq_producer.pub('test_async_nsq', 'test_async_nsq:{i}'.format(i=i))
             await nsq_producer.dpub('test_async_nsq', i * 1000,
                                     'test_delay_async_nsq:{i}'.format(i=i))
