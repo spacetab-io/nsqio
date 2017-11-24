@@ -5,7 +5,8 @@ asyncnsq with python3.6 await/async supported
 Latest Updates
 --------------
 
-support dpub 
+* support dpub 
+* support lookupd_http
 
 
 Install
