@@ -43,8 +43,7 @@ class NsqHTTPConnection:
                 pass
             exc_class = HTTP_EXCEPTIONS.get(resp.status, NsqHttpException)
             raise exc_class(resp.status, resp_body, extra)
-
-        return response['data']
+        return response
 
     def __repr__(self):
         cls_name = self.__class__.__name__

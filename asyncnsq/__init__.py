@@ -35,7 +35,8 @@ async def create_nsq_producer(host='127.0.0.1', port=4150, loop=None, queue=None
     return conn
 
 
-async def create_nsq_consumer(host='127.0.0.1', port=None, loop=None, max_in_flight=42, lookupd_http_addresses=None):
+async def create_nsq_consumer(host=None, loop=None,
+                              max_in_flight=42, lookupd_http_addresses=None):
     """"
     initial function to get consumer
     param: host: host addr with no protocol. 127.0.0.1 
@@ -44,12 +45,15 @@ async def create_nsq_consumer(host='127.0.0.1', port=None, loop=None, max_in_fli
     param: lookupd_http_addresses: heartbeat interval with nsq, set -1 to disable nsq heartbeat check
     """
     # TODO: add parameters type and value validation
-    host, tmp_port = get_host_and_port(host)
-    if not port:
-        port = tmp_port or 4150
+    if host is None:
+        host = ['tcp://127.0.0.1:4150']
+    hosts = [get_host_and_port(i) for i in host]
     loop = loop or asyncio.get_event_loop()
-    conn = NsqConsumer(nsqd_tcp_addresses=[(host, port)],
-                       lookupd_http_addresses=lookupd_http_addresses,
-                       max_in_flight=max_in_flight, loop=loop)
+    if lookupd_http_addresses:
+        conn = NsqConsumer(lookupd_http_addresses=lookupd_http_addresses,
+                           max_in_flight=max_in_flight, loop=loop)
+    else:
+        conn = NsqConsumer(nsqd_tcp_addresses=hosts,
+                           max_in_flight=max_in_flight, loop=loop)
     await conn.connect()
     return conn

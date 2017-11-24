@@ -78,7 +78,7 @@ class Nsq:
         await self._conn.identify(**self._config)
         self._status = consts.CONNECTED
         if self.consumer:
-            self._rdy_control.add_connection(self._conn)
+            self._rdy_control.add_connection(self)
 
     def _on_message(self, msg):
         # should not be coroutine
@@ -133,9 +133,14 @@ class Nsq:
     def wait_messages(self):
         # print('wait_messages')
         while True:
-            future = asyncio.ensure_future(self._queue.get(), loop=self._loop)
-            # print(future)
-            yield future
+            future = self._queue.get()
+            print(future, type(future))
+            aa = yield from future
+            while not aa.done():
+                print('not done')
+                pass
+            print(aa.result())
+            yield aa.result()
 
     async def auth(self, secret):
         """
@@ -152,7 +157,15 @@ class Nsq:
         :param channel:
         :return:
         """
+        self._is_subscribe = True
+
         return await self._conn.execute(SUB, topic, channel)
+
+    async def _redistribute(self):
+        while self._is_subscribe:
+            self._rdy_control.redistribute()
+            await asyncio.sleep(60,
+                                loop=self._loop)
 
     async def pub(self, topic, message):
         """

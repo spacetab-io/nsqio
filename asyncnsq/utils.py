@@ -110,7 +110,7 @@ CHANGE_CONN_RDY = 1
 class RdyControl:
 
     def __init__(self, idle_timeout, max_in_flight, loop=None):
-        self._connections = None
+        self._connections = {}
         self._idle_timeout = idle_timeout
         self._total_ready_count = 0
         self._max_in_flight = max_in_flight
@@ -132,6 +132,7 @@ class RdyControl:
 
     def add_connection(self, connection):
         connection._on_rdy_changed_cb = self.rdy_changed
+        self._connections[connection.id] = connection
 
     def rdy_changed(self, conn_id):
         self._cmd_queue.put_nowait((CHANGE_CONN_RDY, (conn_id,)))

@@ -179,13 +179,14 @@ class NsqConnection:
         is_canceled = False
         while not self._reader.at_eof():
             try:
-                data = await self._reader.read(1024)
-                # print('\n\n', 'socket response data', data)
-            except asyncio.CancelledError:
+                data = await self._reader.read(52)
+            except asyncio.CancelledError as tmp:
                 is_canceled = True
                 logger.error('Task is canceled')
+                logger.exception(tmp)
                 break
             except Exception as exc:
+                logger.exception(exc)
                 logger.debug("Reader task stopped due to: {}".format(exc))
                 break
             self._parser.feed(data)
@@ -204,6 +205,7 @@ class NsqConnection:
         except ProtocolError as exc:
             # ProtocolError is fatal
             # so connection must be closed
+            logger.exception(exc)
             self._closing = True
             self._loop.call_soon(self._do_close, exc)
             logger.error('ProtocolError is fatal')
@@ -214,6 +216,7 @@ class NsqConnection:
             logger.debug("got nsq data: %s", obj)
             resp_type, resp = obj
             hb = consts.HEARTBEAT
+            # print(resp_type, resp)
             if resp_type == consts.FRAME_TYPE_RESPONSE and resp == hb:
                 self._pulse()
             elif resp_type == consts.FRAME_TYPE_RESPONSE:
