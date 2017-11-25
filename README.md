@@ -1,6 +1,6 @@
-asyncnsq (work in progress,仍然开发中)
+asyncnsq
 =========================
-asyncnsq with python3.6 await/async supported
+async nsq with python3.6 await/async supported
 
 Latest Updates
 --------------
