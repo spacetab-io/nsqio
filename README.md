@@ -2,6 +2,11 @@ asyncnsq
 =========================
 async nsq with python3.6 await/async supported
 
+**if you dont like the pynsq(which use tornado) way to interact with nsq, then this library may be suitable for you**
+
+you can use this library as the common way to write things
+
+
 Latest Updates
 --------------
 
@@ -65,10 +70,6 @@ Producer:
             await nsq_producer.dpub('test_async_nsq', i * 1000,
                                     'test_delay_async_nsq:{i}'.format(i=i))
     loop.run_until_complete(go())
-
-you can use host like 'tcp://127.0.0.1:4150' or '127.0.0.1' with port=4150
-
-As for now, only single nsqd addr supported.
 
 Requirements
 ------------
