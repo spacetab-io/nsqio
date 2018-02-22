@@ -6,7 +6,8 @@ import logging
 from asyncnsq.http import NsqLookupd
 from asyncnsq.nsq import create_nsq
 from asyncnsq.utils import RdyControl
-logger = logging.getLogger()
+
+logger = logging.getLogger(__name__)
 
 
 class NsqConsumer:
@@ -55,8 +56,8 @@ class NsqConsumer:
         nsqlookup_conn = NsqLookupd(host, port, loop=self._loop)
         try:
             res = await nsqlookup_conn.lookup(self.topic)
-            logger.info('lookupd response')
-            logger.info(res)
+            logger.debug('lookupd response')
+            logger.debug(res)
         except Exception as tmp:
             logger.error(tmp)
             logger.exception(tmp)
@@ -67,7 +68,7 @@ class NsqConsumer:
             port = producer['tcp_port']
             tmp_id = "tcp://{}:{}".format(host, port)
             if tmp_id not in self._connections:
-                logger.info(('host, port', host, port))
+                logger.debug(('host, port', host, port))
                 conn = await create_nsq(host, port, queue=self._queue,
                                         loop=self._loop)
                 print('conn.id:', conn.id)
