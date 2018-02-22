@@ -180,10 +180,9 @@ class NsqConnection:
         while not self._reader.at_eof():
             try:
                 data = await self._reader.read(52)
-            except asyncio.CancelledError as tmp:
+            except asyncio.CancelledError:
                 is_canceled = True
-                logger.error('Task is canceled')
-                logger.exception(tmp)
+                logger.debug('Task is canceled')
                 break
             except Exception as exc:
                 logger.exception(exc)
