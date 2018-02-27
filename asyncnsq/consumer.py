@@ -71,10 +71,10 @@ class NsqConsumer:
                 logger.debug(('host, port', host, port))
                 conn = await create_nsq(host, port, queue=self._queue,
                                         loop=self._loop)
-                print('conn.id:', conn.id)
+                logger.debug('conn.id:', conn.id)
                 self._connections[conn.id] = conn
                 self._rdy_control.add_connection(conn)
-        nsqlookup_conn.close()
+        await nsqlookup_conn.close()
 
     async def lookupd_task_done_sub(self, topic, channel):
         for conn in self._connections.values():
