@@ -21,8 +21,8 @@ class NsqHTTPConnection:
     def endpoint(self):
         return 'http://{0}:{1}'.format(*self._endpoint)
 
-    def close(self):
-        self._session.close()
+    async def close(self):
+        return await self._session.close()
 
     async def perform_request(self, method, url, params, body):
         _body = _convert_to_str(body) if body else body
