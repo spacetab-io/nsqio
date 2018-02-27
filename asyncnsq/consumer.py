@@ -71,16 +71,16 @@ class NsqConsumer:
                 logger.debug(('host, port', host, port))
                 conn = await create_nsq(host, port, queue=self._queue,
                                         loop=self._loop)
-                logger.debug('conn.id:', conn.id)
+                logger.debug(('conn.id:', conn.id))
                 self._connections[conn.id] = conn
                 self._rdy_control.add_connection(conn)
         await nsqlookup_conn.close()
 
-    async def lookupd_task_done_sub(self, topic, channel):
-        for conn in self._connections.values():
-            result = await conn.sub(topic, channel)
-        self._redistribute_task = asyncio.Task(self._redistribute(),
-                                               loop=self._loop)
+    # async def lookupd_task_done_sub(self, topic, channel):
+    #     for conn in self._connections.values():
+    #         result = await conn.sub(topic, channel)
+    #     self._redistribute_task = asyncio.Task(self._redistribute(),
+    #                                            loop=self._loop)
 
     async def subscribe(self, topic, channel):
         self.topic = topic
@@ -89,16 +89,22 @@ class NsqConsumer:
             await self._lookupd()
         for conn in self._connections.values():
             result = await conn.sub(topic, channel)
-        self._redistribute_task = asyncio.Task(self._redistribute(),
-                                               loop=self._loop)
+        self._redistribute_task = self._loop.create_task(self._redistribute())
 
     def wait_messages(self):
         if not self._is_subscribe:
             raise ValueError('You must subscribe to the topic first')
 
         while self._is_subscribe:
-            fut = asyncio.ensure_future(self._queue.get(), loop=self._loop)
+            fut = self._loop.create_task(self._queue.get())
             yield fut
+
+    async def messages(self):
+        if not self._is_subscribe:
+            raise ValueError('You must subscribe to the topic first')
+
+        while self._is_subscribe:
+            yield await self._queue.get()
 
     def is_starved(self):
         conns = self._connections.values()
