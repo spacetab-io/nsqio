@@ -12,23 +12,24 @@ class NsqHTTPConnection:
     def __init__(self, host='127.0.0.1', port=4150, *, loop):
         self._loop = loop
         self._endpoint = (host, port)
-        self._connector = aiohttp.TCPConnector(resolve=True, loop=loop)
         self._base_url = 'http://{0}:{1}/'.format(*self._endpoint)
-        self._request = aiohttp.request
+
+        self._session = aiohttp.ClientSession(connector=aiohttp.TCPConnector(),
+                                              loop=self._loop)
 
     @property
     def endpoint(self):
         return 'http://{0}:{1}'.format(*self._endpoint)
 
-    def close(self):
-        self._connector.close()
+    async def close(self):
+        return await self._session.close()
 
     async def perform_request(self, method, url, params, body):
         _body = _convert_to_str(body) if body else body
         url = self._base_url + url
-        resp = await self._request(method, url, params=params,
-                                   data=_body, loop=self._loop,
-                                   connector=self._connector)
+        resp = await self._session.request(method, url,
+                                           params=params,
+                                           data=_body)
         resp_body = await resp.text()
         try:
             response = json.loads(resp_body)

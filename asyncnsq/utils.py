@@ -122,8 +122,7 @@ class RdyControl:
 
         self._is_working = True
 
-        self._distributor_task = asyncio.Task(self._distributor(),
-                                              loop=self._loop)
+        self._distributor_task = self._loop.create_task(self._distributor())
 
     def add_connections(self, connections):
         self._connections = connections
@@ -153,6 +152,9 @@ class RdyControl:
     def remove_connection(self, conn):
         self._connections.pop(conn.id)
 
+    def remove_all(self):
+        self._connections = {}
+
     async def _redistribute_rdy_state(self):
         # We redistribute RDY counts in a few cases:
         #
@@ -167,27 +169,33 @@ class RdyControl:
         # producers when we're unable (by configuration or backoff) to provide
         # a RDY count
         # of (at least) 1 to all of our connections.
-        connections = list(self._connections.values())
-        for conn in connections:
-            if conn.rdy_state == 0:
-                continue
 
-            if (time.time() - conn.last_message) < self._idle_timeout:
-                continue
+        connections = self._connections.values()
 
-            await conn.rdy(0)
+        rdy_coros = [
+            conn.rdy(0) for conn in connections
+            if not (conn.rdy_state == 0 or \
+                (time.time() - conn.last_message) < self._idle_timeout)
+        ]
+
         distributed_rdy = sum(c.rdy_state for c in connections)
         not_distributed_rdy = self._max_in_flight - distributed_rdy
 
-        sample = min(not_distributed_rdy, len(connections))
-        conns = random.sample(connections, sample)
-        for conn in conns:
-            await conn.rdy(1)
+        random_connections = random.sample(list(connections),
+                                           min(not_distributed_rdy,
+                                               len(connections)))
+
+        rdy_coros += [conn.rdy(1) for conn in random_connections]
+
+        await asyncio.gather(*rdy_coros)
 
     async def _update_rdy(self, conn_id):
         conn = self._connections[conn_id]
+
         if conn.rdy_state > int(conn._last_rdy * 0.25):
             return
+
         rdy_state = max(1, self._max_in_flight /
                         max(1, len(self._connections)))
+
         await conn.rdy(int(rdy_state))
