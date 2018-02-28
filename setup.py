@@ -41,6 +41,7 @@ classifiers = [
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
     'Operating System :: POSIX',
     'Environment :: Web Environment',
     'Intended Audience :: Developers',
@@ -48,10 +49,16 @@ classifiers = [
     'Topic :: Software Development :: Libraries',
 ]
 
+try:
+    import pypandoc
+    long_description = pypandoc.convert('README.md', 'rst')
+except(IOError, ImportError):
+    long_description = open('README.md').read()
+
 setup(name='asyncnsq',
       version=read_version(),
       description=("asyncio async/await nsq support"),
-      long_description=read('README.md'),
+      long_description=long_description,
       classifiers=classifiers,
       platforms=["POSIX"],
       author="aohan237",
