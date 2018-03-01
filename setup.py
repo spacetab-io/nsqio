@@ -4,7 +4,7 @@ import sys
 from setuptools import setup, find_packages
 
 
-install_requires = []
+install_requires = ['python-snappy']
 
 PY_VER = sys.version_info
 
