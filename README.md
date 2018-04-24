@@ -25,12 +25,13 @@ Usage examples
 All you need is a loop, then enjoy
 
 Consumer:
+    import asyncnsq
 
     loop = asyncio.get_event_loop()
 
     async def go():
         try:
-            nsq_consumer = await create_nsq_consumer(
+            nsq_consumer = await asyncnsq.create_nsq_consumer(
                 lookupd_http_addresses=[
                     ('127.0.0.1', 4161)],
                 max_in_flight=200)
@@ -42,22 +43,17 @@ Consumer:
             nsq_consumer = await create_nsq_consumer(
                 host=['tcp://127.0.0.1:4150'],
                 max_in_flight=200)
-            await nsq_consumer.subscribe('test_async_nsq', 'nsq')
-            for waiter in nsq_consumer.wait_messages():
-                message = await waiter
-                print(message.body)
-                await message.fin()
         except Exception as tmp:
             logger.exception(tmp)
 
     loop.run_until_complete(go())
 
 Producer:
-
+    import asyncnsq
     loop = asyncio.get_event_loop()
 
     async def go():
-        nsq_producer = await create_nsq_producer(host='127.0.0.1', port=4150,
+        nsq_producer = await asyncnsq.create_nsq_producer(host='127.0.0.1', port=4150,
                                                  heartbeat_interval=30000,
                                                  feature_negotiation=True,
                                                  tls_v1=True,
