@@ -27,9 +27,13 @@ class NsqHTTPConnection:
     async def perform_request(self, method, url, params, body):
         _body = _convert_to_str(body) if body else body
         url = self._base_url + url
-        resp = await self._session.request(method, url,
-                                           params=params,
-                                           data=_body)
+        print(method, url, params, _body)
+        try:
+            resp = await self._session.request(method, url,
+                                               params=params,
+                                               data=_body)
+        except Exception as tmp:
+            print('exception', tmp)
         resp_body = await resp.text()
         try:
             response = json.loads(resp_body)

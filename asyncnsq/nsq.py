@@ -120,9 +120,8 @@ class Nsq:
             await asyncio.sleep(t, loop=self._loop)
 
     async def execute(self, command, *args, data=None):
-        if self._status <= consts.CONNECTED and self._reconnect:
+        if self._conn.closed:
             await self.reconnect()
-
         response = self._conn.execute(command, *args, data=data)
         return response
 
@@ -148,7 +147,7 @@ class Nsq:
         :param secret:
         :return:
         """
-        return await self._conn.execute(AUTH, data=secret)
+        return await self.execute(AUTH, data=secret)
 
     async def sub(self, topic, channel):
         """
@@ -159,7 +158,7 @@ class Nsq:
         """
         self._is_subscribe = True
 
-        return await self._conn.execute(SUB, topic, channel)
+        return await self.execute(SUB, topic, channel)
 
     async def _redistribute(self):
         while self._is_subscribe:
@@ -174,7 +173,7 @@ class Nsq:
         :param message:
         :return:
         """
-        return await self._conn.execute(PUB, topic, data=message)
+        return await self.execute(PUB, topic, data=message)
 
     async def dpub(self, topic, delay_time, message):
         """
@@ -186,7 +185,7 @@ class Nsq:
         """
         if not delay_time or delay_time is None:
             delay_time = 0
-        return await self._conn.execute(DPUB, topic, delay_time, data=message)
+        return await self.execute(DPUB, topic, delay_time, data=message)
 
     async def mpub(self, topic, message, *messages):
         """
@@ -197,7 +196,7 @@ class Nsq:
         :return:
         """
         msgs = [message] + list(messages)
-        return await self._conn.execute(MPUB, topic, data=msgs)
+        return await self.execute(MPUB, topic, data=msgs)
 
     async def rdy(self, count):
         """
@@ -210,7 +209,7 @@ class Nsq:
 
         self._last_rdy = count
         self.rdy_state = count
-        return await self._conn.execute(RDY, count)
+        return await self.execute(RDY, count)
 
     async def fin(self, message_id):
         """
@@ -218,7 +217,7 @@ class Nsq:
         :param message_id:
         :return:
         """
-        return await self._conn.execute(FIN, message_id)
+        return await self.execute(FIN, message_id)
 
     async def req(self, message_id, timeout):
         """
@@ -227,7 +226,7 @@ class Nsq:
         :param timeout:
         :return:
         """
-        return await self._conn.execute(REQ, message_id, timeout)
+        return await self.execute(REQ, message_id, timeout)
 
     async def touch(self, message_id):
         """
@@ -235,14 +234,14 @@ class Nsq:
         :param message_id:
         :return:
         """
-        return await self._conn.execute(TOUCH, message_id)
+        return await self.execute(TOUCH, message_id)
 
     async def cls(self):
         """
 
         :return:
         """
-        await self._conn.execute(CLS)
+        await self.execute(CLS)
         self.close()
 
     def close(self):
