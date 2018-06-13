@@ -63,8 +63,7 @@ class NsqConsumer:
             logger.exception(tmp)
 
         for producer in res['producers']:
-            host = '127.0.0.1'
-            # producer['broadcast_address']
+            host = producer['broadcast_address']
             port = producer['tcp_port']
             tmp_id = "tcp://{}:{}".format(host, port)
             if tmp_id not in self._connections:

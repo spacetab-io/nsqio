@@ -1,4 +1,4 @@
-__version__ = '0.3.9'
+__version__ = '0.4.1'
 
 import asyncio
 from .utils import get_host_and_port
