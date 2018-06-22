@@ -69,6 +69,7 @@ class Nsq:
             self._rdy_control = RdyControl(idle_timeout=self._idle_timeout,
                                            max_in_flight=self._max_in_flight,
                                            loop=self._loop)
+        self._loop.create_task(self.reconnect())
 
     async def connect(self):
         self._conn = await create_connection(self._host, self._port,
@@ -108,20 +109,22 @@ class Nsq:
 
     async def reconnect(self):
         timeout_generator = retry_iterator(init_delay=0.1, max_delay=10.0)
-        while not (self._status == consts.CONNECTED):
-            try:
-                await self.connect()
-            except ConnectionError:
-                logger.error("Can not connect to: {}:{} ".format(
-                    self._host, self._port))
-            else:
-                self._status = consts.CONNECTED
-            t = next(timeout_generator)
+        while True:
+            if not (self._status == consts.CONNECTED):
+                print('reconnect writer')
+                try:
+                    await self.connect()
+                except ConnectionError:
+                    logger.error("Can not connect to: {}:{} ".format(
+                        self._host, self._port))
+                else:
+                    self._status = consts.CONNECTED
+                t = next(timeout_generator)
             await asyncio.sleep(t, loop=self._loop)
 
     async def execute(self, command, *args, data=None):
-        if self._conn.closed:
-            await self.reconnect()
+        # if self._conn.closed:
+        #     await self.reconnect()
         response = self._conn.execute(command, *args, data=data)
         return response
 
