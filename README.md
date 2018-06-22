@@ -25,6 +25,7 @@ Usage examples
 All you need is a loop, then enjoy
 
 Consumer:
+
     import asyncnsq
 
     loop = asyncio.get_event_loop()
@@ -49,6 +50,7 @@ Consumer:
     loop.run_until_complete(go())
 
 Producer:
+
     import asyncnsq
     loop = asyncio.get_event_loop()
 
