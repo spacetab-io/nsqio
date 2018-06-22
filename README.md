@@ -12,6 +12,7 @@ Latest Updates
 
 * support dpub 
 * support lookupd_http
+* support producer autoreconnect
 
 
 Install
