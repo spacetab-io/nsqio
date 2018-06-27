@@ -1,14 +1,17 @@
 import asyncio
 import json
 import ssl
+import logging
 
 from collections import deque
 
 from . import consts
-from .log import logger
-from .containers import NsqMessage
+from .messages import NsqMessage
 from .exceptions import ProtocolError, make_error
 from .protocol import Reader, DeflateReader, SnappyReader
+
+
+logger = logging.getLogger(__package__)
 
 
 async def create_connection(host='localhost', port=4151, queue=None, loop=None):
@@ -21,7 +24,9 @@ async def create_connection(host='localhost', port=4151, queue=None, loop=None):
 
 
 class NsqConnection:
-    """XXX"""
+    """
+    base nsq connection class ,used for manipulate reader/writer content
+    """
 
     def __init__(self, reader, writer, host, port, *, on_message=None,
                  queue=None, loop=None):

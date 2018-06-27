@@ -1,10 +1,12 @@
 import asyncio
-from . import consts
 import time
-from .log import logger
+import logging
+from . import consts
 from .utils import retry_iterator, RdyControl
 from .connection import create_connection
 from .consts import TOUCH, REQ, FIN, RDY, CLS, MPUB, PUB, SUB, AUTH, DPUB
+
+logger = logging.getLogger(__package__)
 
 
 async def create_nsq(host='127.0.0.1', port=4150, loop=None, queue=None,
