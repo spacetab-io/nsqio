@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 
+*.vscode/
 # C extensions
 *.so
 *_bak.py
