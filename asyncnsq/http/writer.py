@@ -85,7 +85,7 @@ class Writer(NsqHTTPConnection):
 
     async def unpause_channel(self, channel, topic):
         resp = await self.perform_request(
-            'POST', '/channel/unpause', {'topic': topic, 'channel': channel},
+            'POST', 'channel/unpause', {'topic': topic, 'channel': channel},
             None)
         return resp
 
@@ -101,22 +101,22 @@ class Writer(NsqHTTPConnection):
 
     async def debug_pprof_goroutine(self):
         resp = await self.perform_request(
-            'GET', '/debug/pprof/goroutine', None, None)
+            'GET', 'debug/pprof/goroutine', None, None)
         return resp
 
     async def debug_pprof_heap(self):
         resp = await self.perform_request(
-            'GET', '/debug/pprof/heap', None, None)
+            'GET', 'debug/pprof/heap', None, None)
         return resp
 
     async def debug_pprof_block(self):
         resp = await self.perform_request(
-            'GET', '/debug/pprof/block', None, None)
+            'GET', 'debug/pprof/block', None, None)
         return resp
 
     async def debug_pprof_threadcreate(self):
         resp = await self.perform_request(
-            'GET', '/debug/pprof/threadcreate', None, None)
+            'GET', 'debug/pprof/threadcreate', None, None)
         return resp
 
     async def nsqlookupd_tcp_addresses(self):
@@ -124,5 +124,5 @@ class Writer(NsqHTTPConnection):
         List of nsqlookupd TCP addresses.
         """
         resp = await self.perform_request(
-            'GET', '/config/nsqlookupd_tcp_addresses', None, None)
+            'GET', 'config/nsqlookupd_tcp_addresses', None, None)
         return resp
