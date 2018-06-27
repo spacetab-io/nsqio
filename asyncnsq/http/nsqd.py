@@ -58,34 +58,34 @@ class Nsqd(NsqHTTPConnection):
 
     async def delete_channel(self, topic, channel):
         resp = await self.perform_request(
-            'GET', 'channel/delete', {'topic': topic, 'channel': channel},
+            'POST', 'channel/delete', {'topic': topic, 'channel': channel},
             None)
         return resp
 
     async def empty_topic(self, topic):
         resp = await self.perform_request(
-            'GET', 'topic/empty', {'topic': topic}, None)
+            'POST', 'topic/empty', {'topic': topic}, None)
         return resp
 
     async def topic_pause(self, topic):
         resp = await self.perform_request(
-            'GET', 'topic/pause', {'topic': topic}, None)
+            'POST', 'topic/pause', {'topic': topic}, None)
         return resp
 
     async def topic_unpause(self, topic):
         resp = await self.perform_request(
-            'GET', 'topic/unpause', {'topic': topic}, None)
+            'POST', 'topic/unpause', {'topic': topic}, None)
         return resp
 
     async def pause_channel(self, channel, topic):
         resp = await self.perform_request(
-            'GET', 'channel/pause', {'topic': topic, 'channel': channel},
+            'POST', 'channel/pause', {'topic': topic, 'channel': channel},
             None)
         return resp
 
     async def unpause_channel(self, channel, topic):
         resp = await self.perform_request(
-            'GET', '/channel/unpause', {'topic': topic, 'channel': channel},
+            'POST', '/channel/unpause', {'topic': topic, 'channel': channel},
             None)
         return resp
 
@@ -117,4 +117,12 @@ class Nsqd(NsqHTTPConnection):
     async def debug_pprof_threadcreate(self):
         resp = await self.perform_request(
             'GET', '/debug/pprof/threadcreate', None, None)
+        return resp
+
+    async def nsqlookupd_tcp_addresses(self):
+        """
+        List of nsqlookupd TCP addresses.
+        """
+        resp = await self.perform_request(
+            'GET', '/config/nsqlookupd_tcp_addresses', None, None)
         return resp
