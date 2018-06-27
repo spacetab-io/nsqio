@@ -2,14 +2,15 @@ __version__ = '0.4.3'
 
 import asyncio
 from .utils import get_host_and_port
-from .nsq import Nsq
-from .consumer import NsqConsumer
+from .tcp.writer import NsqWriter
+from .tcp.reader import NsqReader
 
 
-async def create_nsq_producer(host='127.0.0.1', port=4150, loop=None, queue=None,
-                              heartbeat_interval=30000, feature_negotiation=True,
-                              tls_v1=False, snappy=False, deflate=False, deflate_level=6,
-                              consumer=False, sample_rate=0):
+async def create_nsq_writer(
+        host='127.0.0.1', port=4150, loop=None, queue=None,
+        heartbeat_interval=30000, feature_negotiation=True,
+        tls_v1=False, snappy=False, deflate=False, deflate_level=6,
+        consumer=False, sample_rate=0):
     """"
     initial function to get producer
     param: host: host addr with no protocol. 127.0.0.1 
@@ -25,18 +26,20 @@ async def create_nsq_producer(host='127.0.0.1', port=4150, loop=None, queue=None
         port = tmp_port
     loop = loop or asyncio.get_event_loop()
     queue = queue or asyncio.Queue(loop=loop)
-    conn = Nsq(host=host, port=port, queue=queue,
-               heartbeat_interval=heartbeat_interval,
-               feature_negotiation=feature_negotiation,
-               tls_v1=tls_v1, snappy=snappy, deflate=deflate,
-               deflate_level=deflate_level,
-               sample_rate=sample_rate, consumer=consumer, loop=loop)
+    conn = NsqWriter(
+        host=host, port=port, queue=queue,
+        heartbeat_interval=heartbeat_interval,
+        feature_negotiation=feature_negotiation,
+        tls_v1=tls_v1, snappy=snappy, deflate=deflate,
+        deflate_level=deflate_level,
+        sample_rate=sample_rate, consumer=consumer, loop=loop)
     await conn.connect()
     return conn
 
 
-async def create_nsq_consumer(host=None, loop=None,
-                              max_in_flight=42, lookupd_http_addresses=None):
+async def create_nsq_reader(
+        host=None, loop=None,
+        max_in_flight=42, lookupd_http_addresses=None):
     """"
     initial function to get consumer
     param: host: host addr with no protocol. 127.0.0.1 
@@ -50,10 +53,10 @@ async def create_nsq_consumer(host=None, loop=None,
     hosts = [get_host_and_port(i) for i in host]
     loop = loop or asyncio.get_event_loop()
     if lookupd_http_addresses:
-        conn = NsqConsumer(lookupd_http_addresses=lookupd_http_addresses,
-                           max_in_flight=max_in_flight, loop=loop)
+        conn = NsqReader(lookupd_http_addresses=lookupd_http_addresses,
+                         max_in_flight=max_in_flight, loop=loop)
     else:
-        conn = NsqConsumer(nsqd_tcp_addresses=hosts,
-                           max_in_flight=max_in_flight, loop=loop)
+        conn = NsqReader(nsqd_tcp_addresses=hosts,
+                         max_in_flight=max_in_flight, loop=loop)
     await conn.connect()
     return conn

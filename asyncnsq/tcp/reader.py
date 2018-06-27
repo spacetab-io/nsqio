@@ -1,17 +1,17 @@
 import asyncio
 import random
-from collections import deque
-import time
 import logging
 from asyncnsq.http import NsqLookupd
-from asyncnsq.nsq import create_nsq
 from asyncnsq.utils import RdyControl
+from .nsqd import create_nsqd_connection
 
 logger = logging.getLogger(__name__)
 
 
-class NsqConsumer:
-    """Experiment purposes"""
+class NsqReader:
+    """
+    NSQ tcp reader
+    """
 
     def __init__(self, nsqd_tcp_addresses=None, lookupd_http_addresses=None,
                  max_in_flight=42, loop=None):
@@ -47,8 +47,9 @@ class NsqConsumer:
             pass
         if self._nsqd_tcp_addresses:
             for host, port in self._nsqd_tcp_addresses:
-                conn = await create_nsq(host, port, queue=self._queue,
-                                        loop=self._loop)
+                conn = await create_nsqd_connection(
+                    host, port, queue=self._queue,
+                    loop=self._loop)
             self._connections[conn.id] = conn
             self._rdy_control.add_connections(self._connections)
 
@@ -68,8 +69,9 @@ class NsqConsumer:
             tmp_id = "tcp://{}:{}".format(host, port)
             if tmp_id not in self._connections:
                 logger.debug(('host, port', host, port))
-                conn = await create_nsq(host, port, queue=self._queue,
-                                        loop=self._loop)
+                conn = await create_nsqd_connection(
+                    host, port, queue=self._queue,
+                    loop=self._loop)
                 logger.debug(('conn.id:', conn.id))
                 self._connections[conn.id] = conn
                 self._rdy_control.add_connection(conn)

@@ -1,6 +1,4 @@
 from .lookupd import NsqLookupd
-from .nsqd import Nsqd
+from .writer import NsqdWriter
 
-(NsqLookupd, Nsqd)
-
-__all__ = ['NsqLookupd', 'Nsqd']
+__all__ = ['NsqLookupd', 'NsqdWriter']

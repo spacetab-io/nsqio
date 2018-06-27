@@ -18,12 +18,12 @@ async def create_connection(host='localhost', port=4151, queue=None, loop=None):
     """XXX"""
     reader, writer = await asyncio.open_connection(
         host, port, loop=loop)
-    conn = NsqConnection(reader, writer, host, port, queue=queue, loop=loop)
+    conn = TcpConnection(reader, writer, host, port, queue=queue, loop=loop)
     conn.connect()
     return conn
 
 
-class NsqConnection:
+class TcpConnection:
     """
     base nsq connection class ,used for manipulate reader/writer content
     """

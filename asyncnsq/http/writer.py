@@ -3,7 +3,7 @@ from .base import NsqHTTPConnection
 from ..utils import _convert_to_str
 
 
-class Writer(NsqHTTPConnection):
+class NsqdWriter(NsqHTTPConnection):
     """
     :see: http://nsq.io/components/nsqd.html
     """

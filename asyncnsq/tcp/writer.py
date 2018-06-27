@@ -2,7 +2,7 @@ import asyncio
 import time
 import logging
 from . import consts
-from .utils import retry_iterator, RdyControl
+from ..utils import retry_iterator, RdyControl
 from .connection import create_connection
 from .consts import TOUCH, REQ, FIN, RDY, CLS, MPUB, PUB, SUB, AUTH, DPUB
 
@@ -24,17 +24,18 @@ async def create_nsq(host='127.0.0.1', port=4150, loop=None, queue=None,
     # TODO: add parameters type and value validation
     loop = loop or asyncio.get_event_loop()
     queue = queue or asyncio.Queue(loop=loop)
-    conn = Nsq(host=host, port=port, queue=queue,
-               heartbeat_interval=heartbeat_interval,
-               feature_negotiation=feature_negotiation,
-               tls_v1=tls_v1, snappy=snappy, deflate=deflate,
-               deflate_level=deflate_level,
-               sample_rate=sample_rate, consumer=consumer, loop=loop)
+    conn = NsqWriter(
+        host=host, port=port, queue=queue,
+        heartbeat_interval=heartbeat_interval,
+        feature_negotiation=feature_negotiation,
+        tls_v1=tls_v1, snappy=snappy, deflate=deflate,
+        deflate_level=deflate_level,
+        sample_rate=sample_rate, consumer=consumer, loop=loop)
     await conn.connect()
     return conn
 
 
-class Nsq:
+class NsqWriter:
 
     def __init__(self, host='127.0.0.1', port=4150, loop=None, queue=None,
                  heartbeat_interval=30000, feature_negotiation=True,
@@ -64,13 +65,6 @@ class Nsq:
 
         self._on_rdy_changed_cb = None
         self._last_rdy = 0
-        self.consumer = consumer
-        if self.consumer:
-            self._idle_timeout = 10
-            self._max_in_flight = max_in_flight
-            self._rdy_control = RdyControl(idle_timeout=self._idle_timeout,
-                                           max_in_flight=self._max_in_flight,
-                                           loop=self._loop)
         self._loop.create_task(self.reconnect())
 
     async def connect(self):
@@ -80,8 +74,6 @@ class Nsq:
         self._conn._on_message = self._on_message
         await self._conn.identify(**self._config)
         self._status = consts.CONNECTED
-        if self.consumer:
-            self._rdy_control.add_connection(self)
 
     def _on_message(self, msg):
         # should not be coroutine
@@ -92,18 +84,6 @@ class Nsq:
         if self._on_rdy_changed_cb is not None:
             self._on_rdy_changed_cb(self.id)
         return msg
-
-    @property
-    def rdy_state(self):
-        return self._rdy_state
-
-    @rdy_state.setter
-    def rdy_state(self, value):
-        self._rdy_state = value
-
-    @property
-    def in_flight(self):
-        return self._conn.in_flight
 
     @property
     def last_message(self):
@@ -134,18 +114,6 @@ class Nsq:
     def id(self):
         return self._conn.endpoint
 
-    def wait_messages(self):
-        # print('wait_messages')
-        while True:
-            future = self._queue.get()
-            print(future, type(future))
-            aa = yield from future
-            while not aa.done():
-                print('not done')
-                pass
-            print(aa.result())
-            yield aa.result()
-
     async def auth(self, secret):
         """
 
@@ -164,12 +132,6 @@ class Nsq:
         self._is_subscribe = True
 
         return await self.execute(SUB, topic, channel)
-
-    async def _redistribute(self):
-        while self._is_subscribe:
-            self._rdy_control.redistribute()
-            await asyncio.sleep(60,
-                                loop=self._loop)
 
     async def pub(self, topic, message):
         """
@@ -192,7 +154,7 @@ class Nsq:
             delay_time = 0
         return await self.execute(DPUB, topic, delay_time, data=message)
 
-    async def mpub(self, topic, message, *messages):
+    async def mpub(self, topic, *messages):
         """
 
         :param topic:
@@ -200,46 +162,8 @@ class Nsq:
         :param messages:
         :return:
         """
-        msgs = [message] + list(messages)
+        msgs = list(messages)
         return await self.execute(MPUB, topic, data=msgs)
-
-    async def rdy(self, count):
-        """
-
-        :param count:
-        :return:
-        """
-        if not isinstance(count, int):
-            raise TypeError('count argument must be int')
-
-        self._last_rdy = count
-        self.rdy_state = count
-        return await self.execute(RDY, count)
-
-    async def fin(self, message_id):
-        """
-
-        :param message_id:
-        :return:
-        """
-        return await self.execute(FIN, message_id)
-
-    async def req(self, message_id, timeout):
-        """
-
-        :param message_id:
-        :param timeout:
-        :return:
-        """
-        return await self.execute(REQ, message_id, timeout)
-
-    async def touch(self, message_id):
-        """
-
-        :param message_id:
-        :return:
-        """
-        return await self.execute(TOUCH, message_id)
 
     async def cls(self):
         """
@@ -252,14 +176,5 @@ class Nsq:
     def close(self):
         self._conn.close()
 
-    def is_starved(self):
-
-        if self._queue.qsize():
-            starved = False
-        else:
-            starved = (self.in_flight > 0 and
-                       self.in_flight >= (self._last_rdy * 0.85))
-        return starved
-
     def __repr__(self):
-        return '<Nsq{}>'.format(self._conn.__repr__())
+        return '<NsqWriter{}>'.format(self._conn.__repr__())
