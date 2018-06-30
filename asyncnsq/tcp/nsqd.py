@@ -2,7 +2,7 @@ import asyncio
 import time
 import logging
 from . import consts
-from .utils import retry_iterator, RdyControl
+from ..utils import retry_iterator, RdyControl
 from .connection import create_connection
 from .consts import TOUCH, REQ, FIN, RDY, CLS, MPUB, PUB, SUB, AUTH, DPUB
 
@@ -60,6 +60,7 @@ class NsqdConnection:
         self._queue = queue or asyncio.Queue(loop=self._loop)
 
         self._status = consts.INIT
+        self._on_rdy_changed_cb = None
         self._loop.create_task(self.reconnect())
 
     async def connect(self):
@@ -69,8 +70,20 @@ class NsqdConnection:
         self._conn._on_message = self._on_message
         await self._conn.identify(**self._config)
         self._status = consts.CONNECTED
-        if self.consumer:
-            self._rdy_control.add_connection(self)
+
+    def _on_message(self, msg):
+        # should not be coroutine
+        # update connections rdy state
+        self.rdy_state = int(self.rdy_state) - 1
+
+        self._last_message = time.time()
+        if self._on_rdy_changed_cb is not None:
+            self._on_rdy_changed_cb(self.id)
+        return msg
+
+    @property
+    def last_message(self):
+        return self._last_message
 
     async def reconnect(self):
         timeout_generator = retry_iterator(init_delay=0.1, max_delay=10.0)
@@ -92,6 +105,57 @@ class NsqdConnection:
         #     await self.reconnect()
         response = self._conn.execute(command, *args, data=data)
         return response
+
+    async def auth(self, secret):
+        """
+
+        :param secret:
+        :return:
+        """
+        return await self.execute(AUTH, data=secret)
+
+    async def sub(self, topic, channel):
+        """
+
+        :param topic:
+        :param channel:
+        :return:
+        """
+        self._is_subscribe = True
+
+        return await self.execute(SUB, topic, channel)
+
+    async def pub(self, topic, message):
+        """
+
+        :param topic:
+        :param message:
+        :return:
+        """
+        return await self.execute(PUB, topic, data=message)
+
+    async def dpub(self, topic, delay_time, message):
+        """
+
+        :param topic:
+        :param message:
+        :param delay_time: delayed time in millisecond
+        :return:
+        """
+        if not delay_time or delay_time is None:
+            delay_time = 0
+        return await self.execute(DPUB, topic, delay_time, data=message)
+
+    async def mpub(self, topic, *messages):
+        """
+
+        :param topic:
+        :param message:
+        :param messages:
+        :return:
+        """
+        msgs = list(messages)
+        return await self.execute(MPUB, topic, data=msgs)
 
     @property
     def id(self):

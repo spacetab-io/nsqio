@@ -55,7 +55,7 @@ class NsqWriter:
         self._host = host
         self._port = port
         self._conn = None
-        self._loop = loop
+        self._loop = loop or asyncio.get_event_loop()
         self._queue = queue or asyncio.Queue(loop=self._loop)
 
         self._status = consts.INIT
