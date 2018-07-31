@@ -110,9 +110,10 @@ class Nsq:
     async def reconnect(self):
         timeout_generator = retry_iterator(init_delay=0.1, max_delay=10.0)
         while True:
-            if not (self._status == consts.CONNECTED):
-                print('reconnect writer')
+            if self._status == consts.CLOSED:
+                print('_status closed and reconnect writer')
                 try:
+                    await self.close()
                     await self.connect()
                 except ConnectionError:
                     logger.error("Can not connect to: {}:{} ".format(
