@@ -1,3 +1,5 @@
+[![Downloads](https://pepy.tech/badge/asyncnsq)](https://pepy.tech/project/asyncnsq)
+
 asyncnsq
 =========================
 async nsq with python3.6 await/async supported

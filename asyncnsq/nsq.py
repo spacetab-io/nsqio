@@ -120,7 +120,7 @@ class Nsq:
                         self._host, self._port))
                 else:
                     self._status = consts.CONNECTED
-                t = next(timeout_generator)
+            t = next(timeout_generator)
             await asyncio.sleep(t, loop=self._loop)
 
     async def execute(self, command, *args, data=None):
@@ -250,6 +250,7 @@ class Nsq:
 
     def close(self):
         self._conn.close()
+        self._status = consts.CLOSED
 
     def is_starved(self):
 
