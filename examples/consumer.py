@@ -3,9 +3,10 @@ import sys
 import os
 import logging
 sys.path.append(os.getcwd())
-from asyncnsq import create_nsq_consumer
+from asyncnsq.tcp.reader import create_reader
+from asyncnsq.utils import get_logger
 
-logger = logging.getLogger()
+logger = get_logger()
 
 
 def main():
@@ -14,21 +15,31 @@ def main():
 
     async def go():
         try:
-            nsq_consumer = await create_nsq_consumer(
+            nsq_consumer = await create_reader(
                 lookupd_http_addresses=[
                     ('127.0.0.1', 4161)],
                 max_in_flight=200)
             await nsq_consumer.subscribe('test_async_nsq', 'nsq')
-            for waiter in nsq_consumer.wait_messages():
-                message = await waiter
+            async for message in nsq_consumer.messages():
                 print(message.body)
                 await message.fin()
-            nsq_consumer = await create_nsq_consumer(
-                host=['tcp://127.0.0.1:4150'],
+        except Exception as tmp:
+            logger.exception(tmp)
+
+    loop.run_until_complete(go())
+
+
+def tcp_main():
+
+    loop = asyncio.get_event_loop()
+
+    async def go():
+        try:
+            nsq_consumer = await create_reader(
+                nsqd_tcp_addresses=['127.0.0.1:4150'],
                 max_in_flight=200)
             await nsq_consumer.subscribe('test_async_nsq', 'nsq')
-            for waiter in nsq_consumer.wait_messages():
-                message = await waiter
+            async for message in nsq_consumer.messages():
                 print(message.body)
                 await message.fin()
         except Exception as tmp:
@@ -38,4 +49,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    tcp_main()
