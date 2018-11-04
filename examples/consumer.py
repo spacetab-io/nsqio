@@ -14,12 +14,12 @@ def main():
 
     async def go():
         try:
-            nsq_consumer = await create_reader(
+            reader = await create_reader(
                 lookupd_http_addresses=[
                     ('127.0.0.1', 4161)],
                 max_in_flight=200)
-            await nsq_consumer.subscribe('test_async_nsq', 'nsq')
-            async for message in nsq_consumer.messages():
+            await reader.subscribe('test_async_nsq', 'nsq')
+            async for message in reader.messages():
                 print(message.body)
                 await message.fin()
         except Exception as tmp:
@@ -34,11 +34,11 @@ def tcp_main():
 
     async def go():
         try:
-            nsq_consumer = await create_reader(
+            reader = await create_reader(
                 nsqd_tcp_addresses=['127.0.0.1:4150'],
                 max_in_flight=200)
-            await nsq_consumer.subscribe('test_async_nsq', 'nsq')
-            async for message in nsq_consumer.messages():
+            await reader.subscribe('test_async_nsq', 'nsq')
+            async for message in reader.messages():
                 print(message.body)
                 await message.fin()
         except Exception as tmp:
