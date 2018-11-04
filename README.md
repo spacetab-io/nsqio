@@ -56,7 +56,7 @@ All you need is a loop, then enjoy
 Consumer:
 
 ```python
-from asyncnsq.tcp.reader import create_reader
+from asyncnsq import create_reader
 from asyncnsq.utils import get_logger
 
 loop = asyncio.get_event_loop()
