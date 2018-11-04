@@ -24,7 +24,7 @@ def main():
                 print(message.body)
                 await message.fin()
         except Exception as tmp:
-            self.logger.exception(tmp)
+            logger.exception(tmp)
 
     loop.run_until_complete(go())
 
@@ -43,11 +43,11 @@ def tcp_main():
                 print(message.body)
                 await message.fin()
         except Exception as tmp:
-            self.logger.exception(tmp)
+            logger.exception(tmp)
 
     loop.run_until_complete(go())
 
 
 if __name__ == '__main__':
-    main()
+    # main()
     tcp_main()

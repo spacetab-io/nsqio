@@ -72,7 +72,7 @@ class RdyControl:
         connections = self._connections.values()
 
         rdy_coros = [
-            conn.rdy(0) for conn in connections
+            conn.execute(RDY, 0) for conn in connections
             if not (conn.rdy_state == 0 or
                     (time.time() - conn.last_message) < self._idle_timeout)
         ]
@@ -84,7 +84,7 @@ class RdyControl:
                                            min(not_distributed_rdy,
                                                len(connections)))
 
-        rdy_coros += [conn.rdy(1) for conn in random_connections]
+        rdy_coros += [conn.execute(RDY, 1) for conn in random_connections]
 
         await asyncio.gather(*rdy_coros)
 

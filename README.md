@@ -1,74 +1,97 @@
-asyncnsq
-=========================
-async nsq with python3.6 await/async supported
+# asyncnsq
+
+## async nsq with python3.6 await/async supported
 
 **if you dont like the pynsq(which use tornado) way to interact with nsq, then this library may be suitable for you**
 
 you can use this library as the common way to write things
 
+## Important
 
-Latest Updates
+* #### from version 1.0.0 asyncnsq  has a break change in api
+
+* #### it is not stable yet
+
+* #### you may want to use stable " pip install asyncnsq==0.4.5"
+
+## Features
+
 --------------
 
-* support dpub 
-* support lookupd_http
-* support producer autoreconnect
+### Http Client
 
+* support all the method nsq http supplied
 
-Install
--------------
+### Tcp Client
+
+#### Connection
+
+* low level connection.
+
+#### Reader
+
+* reader from both lookupd for auto finding nsqd
+
+* list of known nsqd but they can not use together.
+
+* above two can't use together
+
+#### Writer
+
+* all the common method for nsqd writer
+
+## Install
+
+--------------
 
 pip install asyncnsq
 
-Usage examples
+## Usage examples
+
 --------------
 
 All you need is a loop, then enjoy
 
 Consumer:
 
-    import asyncnsq
+```python
+from asyncnsq.tcp.reader import create_reader
+from asyncnsq.utils import get_logger
 
-    loop = asyncio.get_event_loop()
-
-    async def go():
-        try:
-            nsq_consumer = await asyncnsq.create_nsq_consumer(
-                lookupd_http_addresses=[
-                    ('127.0.0.1', 4161)],
-                max_in_flight=200)
-            await nsq_consumer.subscribe('test_async_nsq', 'nsq')
-            for waiter in nsq_consumer.wait_messages():
-                message = await waiter
-                print(message.body)
-                await message.fin()
-            nsq_consumer = await create_nsq_consumer(
-                host=['tcp://127.0.0.1:4150'],
-                max_in_flight=200)
-        except Exception as tmp:
-            self.logger.exception(tmp)
-
-    loop.run_until_complete(go())
+loop = asyncio.get_event_loop()
+async def go():
+    try:
+        nsq_consumer = await create_reader(
+            nsqd_tcp_addresses=['127.0.0.1:4150'],
+            max_in_flight=200)
+        await nsq_consumer.subscribe('test_async_nsq', 'nsq')
+        async for message in nsq_consumer.messages():
+            print(message.body)
+            await message.fin()
+    except Exception as tmp:
+        self.logger.exception(tmp)
+loop.run_until_complete(go())
+```
 
 Producer:
-
-    import asyncnsq
-    loop = asyncio.get_event_loop()
-
-    async def go():
-        nsq_producer = await asyncnsq.create_nsq_producer(host='127.0.0.1', port=4150,
-                                                 heartbeat_interval=30000,
-                                                 feature_negotiation=True,
-                                                 tls_v1=True,
-                                                 snappy=False,
-                                                 deflate=False,
-                                                 deflate_level=0,
-                                                 loop=loop)
-        for i in range(10):
-            await nsq_producer.pub('test_async_nsq', 'test_async_nsq:{i}'.format(i=i))
-            await nsq_producer.dpub('test_async_nsq', i * 1000,
-                                    'test_delay_async_nsq:{i}'.format(i=i))
-    loop.run_until_complete(go())
+```python
+from asyncnsq import create_writer
+loop = asyncio.get_event_loop()
+async def go():
+    nsq_producer = await create_writer(host='127.0.0.1', port=4150,
+                                       heartbeat_interval=30000,
+                                       feature_negotiation=True,
+                                       tls_v1=True,
+                                       snappy=False,
+                                       deflate=False,
+                                       deflate_level=0,
+                                       loop=loop)
+    for i in range(100):
+        await nsq_producer.pub('test_async_nsq', 'test_async_nsq:{i}'.format(i=i))
+        await nsq_producer.dpub('test_async_nsq', i * 1000,
+                                'test_delay_async_nsq:{i}'.format(i=i))
+loop.run_until_complete(go())
+```
 
 Requirements
 ------------
