@@ -1,21 +1,59 @@
 import asyncio
 import random
 import logging
+import time
 from asyncnsq.http import NsqLookupd
 from asyncnsq.utils import RdyControl
-from .nsqd import create_nsqd_connection
+from functools import partial
+from .connection import create_connection
+from .consts import SUB
 
-logger = logging.getLogger(__name__)
+
+logger = logging.getLogger(__package__)
 
 
-class NsqReader:
+async def create_reader(nsqd_tcp_addresses=None, loop=None,
+                        max_in_flight=42, lookupd_http_addresses=None):
+    """"
+    initial function to get consumer
+    param: nsqd_tcp_addresses: tcp addrs with no protocol.
+        such as ['127.0.0.1:4150','182.168.1.1:4150']
+    param: max_in_flight: number of messages get but not finish or req
+    param: lookupd_http_addresses: first priority.if provided nsqd will neglected
+    """
+    loop = loop or asyncio.get_event_loop()
+    if lookupd_http_addresses:
+        reader = Reader(lookupd_http_addresses=lookupd_http_addresses,
+                        max_in_flight=max_in_flight, loop=loop)
+    else:
+        if nsqd_tcp_addresses is None:
+            nsqd_tcp_addresses = ['127.0.0.1:4150']
+        nsqd_tcp_addresses = [i.split(':') for i in nsqd_tcp_addresses]
+        reader = Reader(nsqd_tcp_addresses=nsqd_tcp_addresses,
+                        max_in_flight=max_in_flight, loop=loop)
+    await reader.connect()
+    return reader
+
+
+class Reader:
     """
     NSQ tcp reader
     """
 
     def __init__(self, nsqd_tcp_addresses=None, lookupd_http_addresses=None,
-                 max_in_flight=42, loop=None):
-
+                 max_in_flight=42, loop=None, heartbeat_interval=30000,
+                 feature_negotiation=True,
+                 tls_v1=False, snappy=False, deflate=False, deflate_level=6,
+                 sample_rate=0, consumer=False):
+        self._config = {
+            "deflate": deflate,
+            "deflate_level": deflate_level,
+            "sample_rate": sample_rate,
+            "snappy": snappy,
+            "tls_v1": tls_v1,
+            "heartbeat_interval": heartbeat_interval,
+            'feature_negotiation': feature_negotiation,
+        }
         self._nsqd_tcp_addresses = nsqd_tcp_addresses or []
         self._lookupd_http_addresses = lookupd_http_addresses or []
 
@@ -39,6 +77,8 @@ class NsqReader:
                                        loop=self._loop)
 
     async def connect(self):
+        logging.info('reader connecting')
+        print('reader connecting')
         if self._lookupd_http_addresses:
             """
             because lookupd must find a topic to find nsqds
@@ -47,18 +87,35 @@ class NsqReader:
             pass
         if self._nsqd_tcp_addresses:
             for host, port in self._nsqd_tcp_addresses:
-                conn = await create_nsqd_connection(
+                conn = await create_connection(
                     host, port, queue=self._queue,
                     loop=self._loop)
+                await self.prepare_conn(conn)
             self._connections[conn.id] = conn
             self._rdy_control.add_connections(self._connections)
+
+    async def prepare_conn(self, conn):
+        conn.rdy_state = 2
+        conn._on_message = partial(self._on_message, conn)
+        result = await conn.identify(**self._config)
+        print('prepare_conn', result)
+
+    def _on_message(self, conn, msg):
+        # should not be coroutine
+        # update connections rdy state
+        conn.rdy_state = int(conn.rdy_state) - 1
+
+        conn._last_message = time.time()
+        if conn._on_rdy_changed_cb is not None:
+            conn._on_rdy_changed_cb(conn.id)
+        return msg
 
     async def _poll_lookupd(self, host, port):
         nsqlookup_conn = NsqLookupd(host, port, loop=self._loop)
         try:
             res = await nsqlookup_conn.lookup(self.topic)
-            logger.debug('lookupd response')
-            logger.debug(res)
+            logger.info('lookupd response')
+            logger.info(res)
         except Exception as tmp:
             logger.error(tmp)
             logger.exception(tmp)
@@ -69,7 +126,7 @@ class NsqReader:
             tmp_id = "tcp://{}:{}".format(host, port)
             if tmp_id not in self._connections:
                 logger.debug(('host, port', host, port))
-                conn = await create_nsqd_connection(
+                conn = await create_connection(
                     host, port, queue=self._queue,
                     loop=self._loop)
                 logger.debug(('conn.id:', conn.id))
@@ -77,20 +134,17 @@ class NsqReader:
                 self._rdy_control.add_connection(conn)
         await nsqlookup_conn.close()
 
-    # async def lookupd_task_done_sub(self, topic, channel):
-    #     for conn in self._connections.values():
-    #         result = await conn.sub(topic, channel)
-    #     self._redistribute_task = asyncio.Task(self._redistribute(),
-    #                                            loop=self._loop)
-
     async def subscribe(self, topic, channel):
         self.topic = topic
         self._is_subscribe = True
         if self._lookupd_http_addresses:
             await self._lookupd()
         for conn in self._connections.values():
-            result = await conn.sub(topic, channel)
+            await self.sub(conn, topic, channel)
         self._redistribute_task = self._loop.create_task(self._redistribute())
+
+    async def sub(self, conn, topic, channel):
+        await conn.execute(SUB, topic, channel)
 
     def wait_messages(self):
         if not self._is_subscribe:
@@ -105,7 +159,9 @@ class NsqReader:
             raise ValueError('You must subscribe to the topic first')
 
         while self._is_subscribe:
-            yield await self._queue.get()
+            result = await self._queue.get()
+            print('message', result)
+            yield result
 
     def is_starved(self):
         conns = self._connections.values()
@@ -119,4 +175,4 @@ class NsqReader:
 
     async def _lookupd(self):
         host, port = random.choice(self._lookupd_http_addresses)
-        result = await self._poll_lookupd(host, port)
+        await self._poll_lookupd(host, port)

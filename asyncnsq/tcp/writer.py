@@ -9,10 +9,11 @@ from .consts import TOUCH, REQ, FIN, RDY, CLS, MPUB, PUB, SUB, AUTH, DPUB
 logger = logging.getLogger(__package__)
 
 
-async def create_nsq(host='127.0.0.1', port=4150, loop=None, queue=None,
-                     heartbeat_interval=30000, feature_negotiation=True,
-                     tls_v1=False, snappy=False, deflate=False, deflate_level=6,
-                     consumer=False, sample_rate=0):
+async def create_writer(
+        host='127.0.0.1', port=4150, loop=None, queue=None,
+        heartbeat_interval=30000, feature_negotiation=True,
+        tls_v1=False, snappy=False, deflate=False, deflate_level=6,
+        consumer=False, sample_rate=0):
     """"
     param: host: host addr with no protocol. 127.0.0.1 
     param: port: host port 
@@ -24,18 +25,18 @@ async def create_nsq(host='127.0.0.1', port=4150, loop=None, queue=None,
     # TODO: add parameters type and value validation
     loop = loop or asyncio.get_event_loop()
     queue = queue or asyncio.Queue(loop=loop)
-    conn = NsqWriter(
+    writer = Writer(
         host=host, port=port, queue=queue,
         heartbeat_interval=heartbeat_interval,
         feature_negotiation=feature_negotiation,
         tls_v1=tls_v1, snappy=snappy, deflate=deflate,
         deflate_level=deflate_level,
         sample_rate=sample_rate, consumer=consumer, loop=loop)
-    await conn.connect()
-    return conn
+    await writer.connect()
+    return writer
 
 
-class NsqWriter:
+class Writer:
 
     def __init__(self, host='127.0.0.1', port=4150, loop=None, queue=None,
                  heartbeat_interval=30000, feature_negotiation=True,
@@ -55,17 +56,11 @@ class NsqWriter:
         self._host = host
         self._port = port
         self._conn = None
-        self._loop = loop or asyncio.get_event_loop()
+        self._loop = loop
         self._queue = queue or asyncio.Queue(loop=self._loop)
-
         self._status = consts.INIT
-        self._reconnect = True
-        self._rdy_state = 0
-        self._last_message = None
-
         self._on_rdy_changed_cb = None
-        self._last_rdy = 0
-        self._loop.create_task(self.reconnect())
+        self._loop.create_task(self.auto_reconnect())
 
     async def connect(self):
         self._conn = await create_connection(self._host, self._port,
@@ -90,29 +85,36 @@ class NsqWriter:
         return self._last_message
 
     async def reconnect(self):
+        try:
+            if self._conn:
+                self._conn.close()
+            self._status = consts.CLOSED
+        except Exception as tmp:
+            logger.info('conn close failed,maybe its closed already or init')
+            logger.exception(tmp)
+        await self.connect()
+
+    async def auto_reconnect(self):
         timeout_generator = retry_iterator(init_delay=0.1, max_delay=10.0)
         while True:
             if not (self._status == consts.CONNECTED):
-                print('reconnect writer')
+                conn_id = self.id if self._conn else 'init'
+                logger.info('reconnect writer{}'.format(conn_id))
                 try:
-                    await self.connect()
+                    await self.reconnect()
                 except ConnectionError:
                     logger.error("Can not connect to: {}:{} ".format(
                         self._host, self._port))
                 else:
                     self._status = consts.CONNECTED
-                t = next(timeout_generator)
+            t = next(timeout_generator)
             await asyncio.sleep(t, loop=self._loop)
 
     async def execute(self, command, *args, data=None):
-        # if self._conn.closed:
-        #     await self.reconnect()
+        if self._conn.closed:
+            await self.reconnect()
         response = self._conn.execute(command, *args, data=data)
         return response
-
-    @property
-    def id(self):
-        return self._conn.endpoint
 
     async def auth(self, secret):
         """
@@ -165,16 +167,12 @@ class NsqWriter:
         msgs = list(messages)
         return await self.execute(MPUB, topic, data=msgs)
 
-    async def cls(self):
-        """
-
-        :return:
-        """
-        await self.execute(CLS)
-        self.close()
+    @property
+    def id(self):
+        return self._conn.endpoint
 
     def close(self):
         self._conn.close()
 
     def __repr__(self):
-        return '<NsqWriter{}>'.format(self._conn.__repr__())
+        return '<Nsqd{}>'.format(self._conn.__repr__())

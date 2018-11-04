@@ -1,4 +1,4 @@
 from .lookupd import NsqLookupd
-from .writer import NsqdWriter
+from .writer import NsqdHttpWriter
 
-__all__ = ['NsqLookupd', 'NsqdWriter']
+__all__ = ['NsqLookupd', 'NsqdHttpWriter']

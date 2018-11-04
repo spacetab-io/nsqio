@@ -9,7 +9,7 @@ from . import consts
 from .messages import NsqMessage
 from .exceptions import ProtocolError, make_error
 from .protocol import Reader, DeflateReader, SnappyReader
-
+from .consts import SUB
 
 logger = logging.getLogger(__package__)
 
@@ -89,6 +89,10 @@ class TcpConnection:
         return "tcp://{}:{}".format(self._host, self._port)
 
     @property
+    def id(self):
+        return self.endpoint
+
+    @property
     def closed(self):
         """True if connection is closed."""
         closed = self._closing or self._closed
@@ -110,6 +114,7 @@ class TcpConnection:
         data = json.dumps(config)
         resp = await self.execute(
             b'IDENTIFY', data=data, cb=self._start_upgrading)
+        print('identify resp', resp)
         if resp in (b'OK', 'OK'):
             self._finish_upgrading()
             return resp

@@ -174,8 +174,8 @@ class RdyControl:
 
         rdy_coros = [
             conn.rdy(0) for conn in connections
-            if not (conn.rdy_state == 0 or \
-                (time.time() - conn.last_message) < self._idle_timeout)
+            if not (conn.rdy_state == 0 or
+                    (time.time() - conn.last_message) < self._idle_timeout)
         ]
 
         distributed_rdy = sum(c.rdy_state for c in connections)
