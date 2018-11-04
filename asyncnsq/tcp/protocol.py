@@ -9,7 +9,7 @@ import snappy
 
 from . import consts
 from .exceptions import ProtocolError
-from .utils import _convert_to_bytes
+from ..utils import _convert_to_bytes
 
 
 __all__ = ['Reader', 'DeflateReader', 'SnappyReader']
