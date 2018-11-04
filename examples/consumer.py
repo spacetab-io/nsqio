@@ -2,8 +2,7 @@ import asyncio
 import sys
 import os
 import logging
-sys.path.append(os.getcwd())
-from asyncnsq.tcp.reader import create_reader
+from asyncnsq import create_reader
 from asyncnsq.utils import get_logger
 
 logger = get_logger()
