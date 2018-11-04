@@ -1,12 +1,9 @@
 import asyncio
 import time
-import logging
 from . import consts
-from ..utils import retry_iterator, RdyControl
+from ..utils import retry_iterator, get_logger
 from .connection import create_connection
 from .consts import TOUCH, REQ, FIN, RDY, CLS, MPUB, PUB, SUB, AUTH, DPUB
-
-logger = logging.getLogger(__package__)
 
 
 async def create_writer(
@@ -41,8 +38,10 @@ class Writer:
     def __init__(self, host='127.0.0.1', port=4150, loop=None, queue=None,
                  heartbeat_interval=30000, feature_negotiation=True,
                  tls_v1=False, snappy=False, deflate=False, deflate_level=6,
-                 sample_rate=0, consumer=False, max_in_flight=42):
+                 sample_rate=0, consumer=False, max_in_flight=42,
+                 log_level=None):
         # TODO: add parameters type and value validation
+        self.logger = get_logger(log_level=log_level)
         self._config = {
             "deflate": deflate,
             "deflate_level": deflate_level,
@@ -90,8 +89,9 @@ class Writer:
                 self._conn.close()
             self._status = consts.CLOSED
         except Exception as tmp:
-            logger.info('conn close failed,maybe its closed already or init')
-            logger.exception(tmp)
+            self.logger.info(
+                'conn close failed,maybe its closed already or init')
+            self.logger.exception(tmp)
         await self.connect()
 
     async def auto_reconnect(self):
@@ -99,11 +99,11 @@ class Writer:
         while True:
             if not (self._status == consts.CONNECTED):
                 conn_id = self.id if self._conn else 'init'
-                logger.info('reconnect writer{}'.format(conn_id))
+                self.logger.info('reconnect writer{}'.format(conn_id))
                 try:
                     await self.reconnect()
                 except ConnectionError:
-                    logger.error("Can not connect to: {}:{} ".format(
+                    self.logger.error("Can not connect to: {}:{} ".format(
                         self._host, self._port))
                 else:
                     self._status = consts.CONNECTED
@@ -175,4 +175,4 @@ class Writer:
         self._conn.close()
 
     def __repr__(self):
-        return '<Nsqd{}>'.format(self._conn.__repr__())
+        return '<Writer{}>'.format(self._conn.__repr__())

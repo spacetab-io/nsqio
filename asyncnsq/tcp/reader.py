@@ -3,13 +3,11 @@ import random
 import logging
 import time
 from asyncnsq.http import NsqLookupd
-from asyncnsq.utils import RdyControl
+from asyncnsq.tcp.reader_rdy import RdyControl
 from functools import partial
 from .connection import create_connection
 from .consts import SUB
-
-
-logger = logging.getLogger(__package__)
+from ..utils import get_logger
 
 
 async def create_reader(nsqd_tcp_addresses=None, loop=None,
@@ -44,7 +42,8 @@ class Reader:
                  max_in_flight=42, loop=None, heartbeat_interval=30000,
                  feature_negotiation=True,
                  tls_v1=False, snappy=False, deflate=False, deflate_level=6,
-                 sample_rate=0, consumer=False):
+                 sample_rate=0, consumer=False, log_level=None):
+        self.logger = get_logger(log_level=log_level)
         self._config = {
             "deflate": deflate,
             "deflate_level": deflate_level,
@@ -78,7 +77,6 @@ class Reader:
 
     async def connect(self):
         logging.info('reader connecting')
-        print('reader connecting')
         if self._lookupd_http_addresses:
             """
             because lookupd must find a topic to find nsqds
@@ -98,7 +96,6 @@ class Reader:
         conn.rdy_state = 2
         conn._on_message = partial(self._on_message, conn)
         result = await conn.identify(**self._config)
-        print('prepare_conn', result)
 
     def _on_message(self, conn, msg):
         # should not be coroutine
@@ -114,22 +111,22 @@ class Reader:
         nsqlookup_conn = NsqLookupd(host, port, loop=self._loop)
         try:
             res = await nsqlookup_conn.lookup(self.topic)
-            logger.info('lookupd response')
-            logger.info(res)
+            self.logger.info('lookupd response')
+            self.logger.info(res)
         except Exception as tmp:
-            logger.error(tmp)
-            logger.exception(tmp)
+            self.logger.error(tmp)
+            self.logger.exception(tmp)
 
         for producer in res['producers']:
             host = producer['broadcast_address']
             port = producer['tcp_port']
             tmp_id = "tcp://{}:{}".format(host, port)
             if tmp_id not in self._connections:
-                logger.debug(('host, port', host, port))
+                self.logger.debug(('host, port', host, port))
                 conn = await create_connection(
                     host, port, queue=self._queue,
                     loop=self._loop)
-                logger.debug(('conn.id:', conn.id))
+                self.logger.debug(('conn.id:', conn.id))
                 self._connections[conn.id] = conn
                 self._rdy_control.add_connection(conn)
         await nsqlookup_conn.close()
@@ -141,6 +138,8 @@ class Reader:
             await self._lookupd()
         for conn in self._connections.values():
             await self.sub(conn, topic, channel)
+            if conn._on_rdy_changed_cb is not None:
+                conn._on_rdy_changed_cb(conn.id)
         self._redistribute_task = self._loop.create_task(self._redistribute())
 
     async def sub(self, conn, topic, channel):
@@ -160,7 +159,6 @@ class Reader:
 
         while self._is_subscribe:
             result = await self._queue.get()
-            print('message', result)
             yield result
 
     def is_starved(self):

@@ -10,8 +10,7 @@ from .messages import NsqMessage
 from .exceptions import ProtocolError, make_error
 from .protocol import Reader, DeflateReader, SnappyReader
 from .consts import SUB
-
-logger = logging.getLogger(__package__)
+from ..utils import get_logger
 
 
 async def create_connection(host='localhost', port=4151, queue=None, loop=None):
@@ -29,8 +28,8 @@ class TcpConnection:
     """
 
     def __init__(self, reader, writer, host, port, *, on_message=None,
-                 queue=None, loop=None):
-
+                 queue=None, loop=None, log_level=None):
+        self.logger = get_logger(log_level=log_level)
         self._reader, self._writer = reader, writer
         self._host, self._port = host, port
 
@@ -72,7 +71,7 @@ class TcpConnection:
             self._cmd_waiters.append((fut, cb))
 
         command_raw = self._parser.encode_command(command, *args, data=data)
-        logger.debug('execute command %s' % command_raw)
+        self.logger.debug('execute command %s' % command_raw)
         self._writer.write(command_raw)
 
         # track all processed and requeued messages
@@ -114,7 +113,6 @@ class TcpConnection:
         data = json.dumps(config)
         resp = await self.execute(
             b'IDENTIFY', data=data, cb=self._start_upgrading)
-        print('identify resp', resp)
         if resp in (b'OK', 'OK'):
             self._finish_upgrading()
             return resp
@@ -135,7 +133,7 @@ class TcpConnection:
 
     def _do_close(self, exc=None):
         if exc:
-            logger.error("Connection closed with error: {}".format(exc))
+            self.logger.error("Connection closed with error: {}".format(exc))
         if self._closed:
             return
         self._closed = True
@@ -170,7 +168,7 @@ class TcpConnection:
 
     def _on_reader_task_stopped(self, future):
         exc = future.exception()
-        logger.error('DONE: TASK {}'.format(exc))
+        self.logger.error('DONE: TASK {}'.format(exc))
 
     def _upgrade_to_snappy(self):
         self._parser = SnappyReader(self._parser.buffer)
@@ -192,11 +190,11 @@ class TcpConnection:
                 data = await self._reader.read(52)
             except asyncio.CancelledError:
                 is_canceled = True
-                logger.debug('Task is canceled')
+                self.logger.debug('Task is canceled')
                 break
             except Exception as exc:
-                logger.exception(exc)
-                logger.debug("Reader task stopped due to: {}".format(exc))
+                self.logger.exception(exc)
+                self.logger.debug("Reader task stopped due to: {}".format(exc))
                 break
             self._parser.feed(data)
             not self._is_upgrading and self._read_buffer()
@@ -214,15 +212,15 @@ class TcpConnection:
         except ProtocolError as exc:
             # ProtocolError is fatal
             # so connection must be closed
-            logger.exception(exc)
+            self.logger.exception(exc)
             self._closing = True
             self._loop.call_soon(self._do_close, exc)
-            logger.error('ProtocolError is fatal')
+            self.logger.error('ProtocolError is fatal')
             return
         else:
             if obj is False:
                 return False
-            logger.debug("got nsq data: %s", obj)
+            self.logger.debug("got nsq data: %s", obj)
             resp_type, resp = obj
             hb = consts.HEARTBEAT
             # print(resp_type, resp)

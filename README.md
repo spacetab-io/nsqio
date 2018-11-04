@@ -46,7 +46,7 @@ Consumer:
                 host=['tcp://127.0.0.1:4150'],
                 max_in_flight=200)
         except Exception as tmp:
-            logger.exception(tmp)
+            self.logger.exception(tmp)
 
     loop.run_until_complete(go())
 
