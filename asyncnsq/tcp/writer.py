@@ -114,7 +114,7 @@ class Writer:
         if self._conn.closed:
             await self.reconnect()
         response = self._conn.execute(command, *args, data=data)
-        return response
+        return await response
 
     async def auth(self, secret):
         """
