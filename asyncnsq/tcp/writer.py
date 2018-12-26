@@ -10,7 +10,7 @@ async def create_writer(
         host='127.0.0.1', port=4150, loop=None, queue=None,
         heartbeat_interval=30000, feature_negotiation=True,
         tls_v1=False, snappy=False, deflate=False, deflate_level=6,
-        consumer=False, sample_rate=0):
+        consumer=False, sample_rate=0, log_level=None):
     """"
     param: host: host addr with no protocol. 127.0.0.1 
     param: port: host port 
@@ -27,7 +27,7 @@ async def create_writer(
         heartbeat_interval=heartbeat_interval,
         feature_negotiation=feature_negotiation,
         tls_v1=tls_v1, snappy=snappy, deflate=deflate,
-        deflate_level=deflate_level,
+        deflate_level=deflate_level, log_level=log_level,
         sample_rate=sample_rate, consumer=consumer, loop=loop)
     await writer.connect()
     return writer
@@ -62,6 +62,7 @@ class Writer:
         self._loop.create_task(self.auto_reconnect())
 
     async def connect(self):
+        self.logger.debug("writer init connect")
         self._conn = await create_connection(self._host, self._port,
                                              self._queue, loop=self._loop)
 
@@ -84,6 +85,8 @@ class Writer:
         return self._last_message
 
     async def reconnect(self):
+        self.logger.debug("writer reconnect")
+        self.logger.debug(self._status)
         try:
             if self._conn:
                 self._conn.close()
@@ -95,9 +98,13 @@ class Writer:
         await self.connect()
 
     async def auto_reconnect(self):
+        self.logger.debug("writer autoreconnect")
         timeout_generator = retry_iterator(init_delay=0.1, max_delay=10.0)
         while True:
+            self.logger.debug("autoreconnect check loop")
             if not (self._status == consts.CONNECTED):
+                self.logger.debug(
+                    f"writer close({self._status})detected,reconnect")
                 conn_id = self.id if self._conn else 'init'
                 self.logger.info('reconnect writer{}'.format(conn_id))
                 try:
@@ -112,6 +119,8 @@ class Writer:
 
     async def execute(self, command, *args, data=None):
         if self._conn.closed:
+            self.logger.debug(
+                f"execute found conn closed, reconnect()")
             await self.reconnect()
         response = self._conn.execute(command, *args, data=data)
         return await response
