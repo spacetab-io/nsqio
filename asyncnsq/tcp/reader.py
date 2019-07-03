@@ -7,7 +7,8 @@ from asyncnsq.tcp.reader_rdy import RdyControl
 from functools import partial
 from .connection import create_connection
 from .consts import SUB
-from ..utils import get_logger
+
+logger = logging.getLogger(__package__)
 
 
 async def create_reader(nsqd_tcp_addresses=None, loop=None,
@@ -43,7 +44,6 @@ class Reader:
                  feature_negotiation=True,
                  tls_v1=False, snappy=False, deflate=False, deflate_level=6,
                  sample_rate=0, consumer=False, log_level=None):
-        self.logger = get_logger(log_level=log_level)
         self._config = {
             "deflate": deflate,
             "deflate_level": deflate_level,
@@ -111,22 +111,22 @@ class Reader:
         nsqlookup_conn = NsqLookupd(host, port, loop=self._loop)
         try:
             res = await nsqlookup_conn.lookup(self.topic)
-            self.logger.info('lookupd response')
-            self.logger.info(res)
+            logger.info('lookupd response')
+            logger.info(res)
         except Exception as tmp:
-            self.logger.error(tmp)
-            self.logger.exception(tmp)
+            logger.error(tmp)
+            logger.exception(tmp)
 
         for producer in res['producers']:
             host = producer['broadcast_address']
             port = producer['tcp_port']
             tmp_id = "tcp://{}:{}".format(host, port)
             if tmp_id not in self._connections:
-                self.logger.debug(('host, port', host, port))
+                logger.debug(('host, port', host, port))
                 conn = await create_connection(
                     host, port, queue=self._queue,
                     loop=self._loop)
-                self.logger.debug(('conn.id:', conn.id))
+                logger.debug(('conn.id:', conn.id))
                 self._connections[conn.id] = conn
                 self._rdy_control.add_connection(conn)
         await nsqlookup_conn.close()

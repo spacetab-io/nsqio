@@ -1,9 +1,12 @@
 import asyncio
 import time
+import logging
 from . import consts
-from ..utils import retry_iterator, get_logger
+from ..utils import retry_iterator
 from .connection import create_connection
 from .consts import TOUCH, REQ, FIN, RDY, CLS, MPUB, PUB, SUB, AUTH, DPUB
+
+logger = logging.getLogger(__package__)
 
 
 async def create_writer(
@@ -41,7 +44,6 @@ class Writer:
                  sample_rate=0, consumer=False, max_in_flight=42,
                  log_level=None):
         # TODO: add parameters type and value validation
-        self.logger = get_logger(log_level=log_level)
         self._config = {
             "deflate": deflate,
             "deflate_level": deflate_level,
@@ -62,7 +64,7 @@ class Writer:
         self._loop.create_task(self.auto_reconnect())
 
     async def connect(self):
-        self.logger.debug("writer init connect")
+        logger.debug("writer init connect")
         self._conn = await create_connection(self._host, self._port,
                                              self._queue, loop=self._loop)
 
@@ -85,32 +87,32 @@ class Writer:
         return self._last_message
 
     async def reconnect(self):
-        self.logger.debug("writer reconnect")
-        self.logger.debug(self._status)
+        logger.debug("writer reconnect")
+        logger.debug(self._status)
         try:
             if self._conn:
                 self._conn.close()
             self._status = consts.CLOSED
         except Exception as tmp:
-            self.logger.info(
+            logger.info(
                 'conn close failed,maybe its closed already or init')
-            self.logger.exception(tmp)
+            logger.exception(tmp)
         await self.connect()
 
     async def auto_reconnect(self):
-        self.logger.debug("writer autoreconnect")
+        logger.debug("writer autoreconnect")
         timeout_generator = retry_iterator(init_delay=0.1, max_delay=10.0)
         while True:
-            self.logger.debug("autoreconnect check loop")
+            logger.debug("autoreconnect check loop")
             if not (self._status == consts.CONNECTED):
-                self.logger.debug(
+                logger.debug(
                     f"writer close({self._status})detected,reconnect")
                 conn_id = self.id if self._conn else 'init'
-                self.logger.info('reconnect writer{}'.format(conn_id))
+                logger.info('reconnect writer{}'.format(conn_id))
                 try:
                     await self.reconnect()
                 except ConnectionError:
-                    self.logger.error("Can not connect to: {}:{} ".format(
+                    logger.error("Can not connect to: {}:{} ".format(
                         self._host, self._port))
                 else:
                     self._status = consts.CONNECTED
@@ -119,7 +121,7 @@ class Writer:
 
     async def execute(self, command, *args, data=None):
         if self._conn.closed:
-            self.logger.debug(
+            logger.debug(
                 f"execute found conn closed, reconnect()")
             await self.reconnect()
         response = self._conn.execute(command, *args, data=data)
