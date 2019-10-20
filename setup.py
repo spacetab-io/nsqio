@@ -4,7 +4,7 @@ import sys
 from setuptools import setup, find_packages
 
 
-install_requires = ['python-snappy']
+install_requires = ['python-snappy', 'aiohttp']
 NAME = 'asyncnsq'
 PACKAGE = 'asyncnsq'
 PY_VER = sys.version_info
