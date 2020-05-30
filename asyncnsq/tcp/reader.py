@@ -89,19 +89,16 @@ class Reader:
                     host, port, queue=self._queue,
                     loop=self._loop)
                 await self.prepare_conn(conn)
-            self._connections[conn.id] = conn
+                self._connections[conn.id] = conn
             self._rdy_control.add_connections(self._connections)
+        # init distribute for conns, init update rdy state for conn
+        self._rdy_control.redistribute()
 
     async def prepare_conn(self, conn):
-        conn.rdy_state = 2
         conn._on_message = partial(self._on_message, conn)
-        result = await conn.identify(**self._config)
+        _ = await conn.identify(**self._config)
 
     def _on_message(self, conn, msg):
-        # should not be coroutine
-        # update connections rdy state
-        conn.rdy_state = int(conn.rdy_state) - 1
-
         conn._last_message = time.time()
         if conn._on_rdy_changed_cb is not None:
             conn._on_rdy_changed_cb(conn.id)
@@ -140,7 +137,11 @@ class Reader:
             await self.sub(conn, topic, channel)
             if conn._on_rdy_changed_cb is not None:
                 conn._on_rdy_changed_cb(conn.id)
-        self._redistribute_task = self._loop.create_task(self._redistribute())
+
+        # redistribute is a task for fail or overload to
+        # rebalance tcpconnections
+        # consider for further. disable now
+        # self._redistribute_task = self._loop.create_task(self._redistribute())
 
     async def sub(self, conn, topic, channel):
         await conn.execute(SUB, topic, channel)
@@ -160,10 +161,6 @@ class Reader:
         while self._is_subscribe:
             result = await self._queue.get()
             yield result
-
-    def is_starved(self):
-        conns = self._connections.values()
-        return any(conn.is_starved() for conn in conns)
 
     async def _redistribute(self):
         while self._is_subscribe:

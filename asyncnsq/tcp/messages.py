@@ -1,4 +1,3 @@
-import asyncio
 from collections import namedtuple
 from .consts import TOUCH, REQ, FIN
 

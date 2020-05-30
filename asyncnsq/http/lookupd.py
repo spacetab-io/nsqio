@@ -11,7 +11,7 @@ class NsqLookupd(NsqHTTPConnection):
         """Monitoring endpoint.
         :returns: should return `"OK"`, otherwise raises an exception.
         """
-        return self.perform_request('GET', 'ping', None, None)
+        return await self.perform_request('GET', 'ping', None, None)
 
     async def info(self):
         """Returns version information."""

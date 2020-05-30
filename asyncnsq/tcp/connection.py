@@ -9,12 +9,12 @@ from . import consts
 from .messages import NsqMessage
 from .exceptions import ProtocolError, make_error
 from .protocol import Reader, DeflateReader, SnappyReader
-from .consts import SUB
 
 logger = logging.getLogger(__package__)
 
 
-async def create_connection(host='localhost', port=4151, queue=None, loop=None):
+async def create_connection(host='localhost', port=4151,
+                            queue=None, loop=None):
     """XXX"""
     reader, writer = await asyncio.open_connection(
         host, port, loop=loop)
@@ -266,4 +266,4 @@ class TcpConnection:
         self._is_upgrading = False
 
     def __repr__(self):
-        return '<NsqConnection: {}:{}'.format(self._host, self._port)
+        return '<TcpConnection: {}:{}'.format(self._host, self._port)

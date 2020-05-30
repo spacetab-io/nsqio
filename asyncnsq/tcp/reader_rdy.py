@@ -70,27 +70,34 @@ class RdyControl:
         # of (at least) 1 to all of our connections.
 
         connections = self._connections.values()
+        # disable for further deprecate
 
-        rdy_coros = [
-            conn.execute(RDY, 0) for conn in connections
-            if not (conn.rdy_state == 0 or
-                    (time.time() - conn.last_message) < self._idle_timeout)
-        ]
+        # rdy_coros = [
+        #     conn.execute(RDY, 0) for conn in connections
+        #     if not (conn.rdy_state == 0 or
+        #             (time.time() - conn.last_message) < self._idle_timeout)
+        # ]
 
-        distributed_rdy = sum(c.rdy_state for c in connections)
+        distributed_rdy = sum(c._in_flight for c in connections)
         not_distributed_rdy = self._max_in_flight - distributed_rdy
 
         random_connections = random.sample(list(connections),
                                            min(not_distributed_rdy,
                                                len(connections)))
 
-        rdy_coros += [conn.execute(RDY, 1) for conn in random_connections]
+        rdy_coros = [conn.execute(RDY, 1) for conn in random_connections]
 
         await asyncio.gather(*rdy_coros)
 
     async def _update_rdy(self, conn_id):
         conn = self._connections[conn_id]
+        # this is the configuration max_in_flight split even on conn
+        base_conn_max_in_flight = self._max_in_flight / \
+            max(1, len(self._connections))
 
-        rdy_state = max(1, self._max_in_flight /
-                        max(1, len(self._connections)))
-        await conn.execute(RDY, int(rdy_state))
+        # this is the in_flight number of the conn_id's conn
+        conn_in_flight = conn._in_flight
+
+        # get the max rdy state for conn
+        rdy_state = int(max(1, base_conn_max_in_flight - conn_in_flight))
+        await conn.execute(RDY, rdy_state)
