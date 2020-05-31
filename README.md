@@ -2,7 +2,7 @@
 [![Downloads](https://pepy.tech/badge/asyncnsq)](https://pepy.tech/project/asyncnsq)
 [![PyPI version](https://badge.fury.io/py/asyncnsq.svg)](https://badge.fury.io/py/asyncnsq)
 
-## async nsq with python3.6 await/async supported
+## async nsq with asyncio
 
 **if you dont like the pynsq(which use tornado) way to interact with nsq, then this library may be suitable for you**
 
@@ -105,7 +105,7 @@ loop.run_until_complete(go())
 Requirements
 ------------
 
-* Python_ 3.5+  https://www.python.org
+* Python_ 3.6+  https://www.python.org
 * nsq_  http://nsq.io
 
 * python-snappy
