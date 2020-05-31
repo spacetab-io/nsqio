@@ -12,7 +12,8 @@ logger = logging.getLogger(__package__)
 
 
 async def create_reader(nsqd_tcp_addresses=None, loop=None,
-                        max_in_flight=42, lookupd_http_addresses=None):
+                        max_in_flight=42, lookupd_http_addresses=None,
+                        **kwargs):
     """"
     initial function to get consumer
     param: nsqd_tcp_addresses: tcp addrs with no protocol.
@@ -29,7 +30,8 @@ async def create_reader(nsqd_tcp_addresses=None, loop=None,
             nsqd_tcp_addresses = ['127.0.0.1:4150']
         nsqd_tcp_addresses = [i.split(':') for i in nsqd_tcp_addresses]
         reader = Reader(nsqd_tcp_addresses=nsqd_tcp_addresses,
-                        max_in_flight=max_in_flight, loop=loop)
+                        max_in_flight=max_in_flight, loop=loop,
+                        **kwargs)
     await reader.connect()
     return reader
 

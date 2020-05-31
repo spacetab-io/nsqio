@@ -6,10 +6,13 @@ import abc
 import struct
 import zlib
 import snappy
+import logging
 
 from . import consts
 from .exceptions import ProtocolError
 from ..utils import _convert_to_bytes
+
+logger = logging.getLogger(__package__)
 
 
 __all__ = ['Reader', 'DeflateReader', 'SnappyReader']
@@ -147,6 +150,14 @@ class Reader(BaseReader):
             start, end = consts.DATA_SIZE, consts.DATA_SIZE + consts.FRAME_SIZE
 
             self._frame_type = struct.unpack('>l', self._buffer[start:end])[0]
+            # temp neglect for frame error.
+            # todo
+            if self._frame_type not in (consts.FRAME_TYPE_RESPONSE,
+                                        consts.FRAME_TYPE_ERROR,
+                                        consts.FRAME_TYPE_MESSAGE):
+                logger.debug(f"_frame_type error-> {self._frame_type}")
+                self._reset()
+                return False
             resp = self._parse_payload()
             self._reset()
             return resp
@@ -160,6 +171,7 @@ class Reader(BaseReader):
         self._frame_type = None
 
     def _parse_payload(self):
+
         response_type, response = self._frame_type, None
         if response_type == consts.FRAME_TYPE_RESPONSE:
             response = self._unpack_response()

@@ -30,12 +30,15 @@ class NsqHTTPConnection:
         url = self._base_url + url
 
         # debug info for user to check if exception happens
-        logger.debug(f"{method}, {url}, {params}, {_body}")
+
         # let user decide if what to do with the aiohttp exceptions
         resp = await self._session.request(method, url,
                                            params=params,
                                            data=_body)
+
         resp_body = await resp.text()
+        logger.debug(f"resp= > {resp_body}, \
+                     {method}, {url}, {params}, {_body}, {type(_body)}")
         try:
             response = json.loads(resp_body)
         except ValueError:

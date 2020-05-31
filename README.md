@@ -42,6 +42,13 @@ you can use this library as the common way to write things
 
 * all the common method for nsqd writer
 
+## Next Features
+
+### different reader protocol support
+### more doc to write
+### more tests
+
+
 ## Install
 
 --------------

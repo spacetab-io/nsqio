@@ -13,9 +13,17 @@ from .protocol import Reader, DeflateReader, SnappyReader
 logger = logging.getLogger(__package__)
 
 
-async def create_connection(host='localhost', port=4151,
+async def create_connection(host='localhost', port=4150,
                             queue=None, loop=None):
-    """XXX"""
+    """create nsq tcp connection
+    Args:
+        host: host address
+        port: host port
+        queue: user define asyncio queue
+        loop: user define asyncio loop
+    Return:
+        TcpConnection
+    """
     reader, writer = await asyncio.open_connection(
         host, port, loop=loop)
     conn = TcpConnection(reader, writer, host, port, queue=queue, loop=loop)
@@ -132,6 +140,7 @@ class TcpConnection:
         return resp
 
     def _do_close(self, exc=None):
+        print("this is the going close info")
         if exc:
             logger.error("Connection closed with error: {}".format(exc))
         if self._closed:
@@ -203,6 +212,7 @@ class TcpConnection:
             # useful during update to TLS, task canceled but connection
             # should not be closed
             return
+        print(f"{self.id} is read to end ,going to close")
         self._closing = True
         self._loop.call_soon(self._do_close, None)
 

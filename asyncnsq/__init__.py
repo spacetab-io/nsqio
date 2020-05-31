@@ -1,4 +1,4 @@
-__version__ = '1.1.2'
+__version__ = '1.2.0'
 from asyncnsq.tcp.writer import create_writer
 from asyncnsq.tcp.reader import create_reader
 

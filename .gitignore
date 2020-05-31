@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 
+.python-version
 *.vscode/
 # C extensions
 *.so

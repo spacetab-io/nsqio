@@ -1,4 +1,3 @@
-import asyncio
 from .base import NsqHTTPConnection
 from ..utils import _convert_to_str
 

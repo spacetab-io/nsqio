@@ -1,24 +1,22 @@
 from ._testutils import run_until_complete, BaseTest
-from asyncnsq.http.rest_producer import  create_http_producer
+from asyncnsq.http.writer import NsqdHttpWriter
 
 
-class NsqHTTPProducerTest(BaseTest):
+class NsqdHttpWriterTest(BaseTest):
 
     @run_until_complete
-    def test_http_publish(self):
+    async def test_http_publish(self):
 
-        endpoints = [('127.0.0.1', 4151)]
-        nsq_producer = yield from create_http_producer(endpoints,
-                                                       loop=self.loop)
-        ok = yield from nsq_producer.publish('http_baz', 'producer msg')
+        http_writer = NsqdHttpWriter(
+            "127.0.0.1", 4151, loop=self.loop)
+        ok = await http_writer.pub('http_baz', 'producer msg')
         self.assertEqual(ok, 'OK')
 
     @run_until_complete
-    def test_http_mpublish(self):
+    async def test_http_mpublish(self):
 
-        endpoints = [('127.0.0.1', 4151)]
-        nsq_producer = yield from create_http_producer(endpoints,
-                                                       loop=self.loop)
+        http_writer = NsqdHttpWriter(
+            "127.0.0.1", 4151, loop=self.loop)
         messages = ['baz:1', b'baz:2', 3.14, 42]
-        ok = yield from nsq_producer.mpublish('http_baz', *messages)
+        ok = await http_writer.mpub('http_baz', *messages)
         self.assertEqual(ok, 'OK')

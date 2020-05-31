@@ -1,120 +1,125 @@
 import asyncio
 from ._testutils import run_until_complete, BaseTest
-from asyncnsq.connection import create_connection, NsqConnection
-from asyncnsq.http import Nsqd
-from asyncnsq.protocol import Reader, SnappyReader, DeflateReader
+from asyncnsq.tcp.connection import create_connection, TcpConnection
+from asyncnsq.http.writer import NsqdHttpWriter
+from asyncnsq.tcp.protocol import Reader, SnappyReader, DeflateReader
 
 
 class NsqConnectionTest(BaseTest):
 
     def setUp(self):
-        self.topic = b'foo'
+        self.topic = 'foo'
         self.host = '127.0.0.1'
         self.port = 4150
         super().setUp()
+        self.http_writer = NsqdHttpWriter(
+            self.host, self.port+1, loop=self.loop)
+        create_topic_res = self.loop.run_until_complete(
+            self.http_writer.create_topic(self.topic))
+        print("create_topic_res", create_topic_res)
+        self.assertEqual(create_topic_res, "")
 
     def tearDown(self):
-        conn = Nsqd(self.host, self.port+1, loop=self.loop)
-        try:
-            self.loop.run_until_complete(conn.delete_topic(self.topic))
-        except Exception:
-            # TODO: fix
-            pass
         super().tearDown()
 
     @run_until_complete
-    def test_basic_instance(self):
+    async def test_basic_instance(self):
         host, port = '127.0.0.1', 4150
-        nsq = yield from create_connection(host=host, port=port,
-                                           loop=self.loop)
-        self.assertIsInstance(nsq, NsqConnection)
-        self.assertTrue('NsqConnection' in nsq.__repr__())
-        self.assertTrue(not nsq.closed)
-        self.assertTrue(host in nsq.endpoint)
-        self.assertTrue(str(port) in nsq.endpoint)
-        nsq.close()
-        self.assertEqual(nsq.closed, True)
+        conn = await create_connection(host=host, port=port,
+                                       loop=self.loop)
+        self.assertIsInstance(conn, TcpConnection)
+        self.assertTrue('TcpConnection' in conn.__repr__())
+        self.assertTrue(host in conn.endpoint)
+        self.assertTrue(str(port) in conn.endpoint)
+        conn.close()
+        self.assertEqual(conn.closed, True)
 
     @run_until_complete
-    def test_pub_sub(self):
-        conn = yield from create_connection(host=self.host, port=self.port,
-                                            loop=self.loop)
+    async def test_tls(self):
+        conn = await create_connection(host=self.host, port=self.port,
+                                       loop=self.loop)
 
-        yield from self._pub_sub_rdy_fin(conn)
-
-    @run_until_complete
-    def test_tls(self):
-        conn = yield from create_connection(host=self.host, port=self.port,
-                                            loop=self.loop)
-
-        config = {'feature_negotiation':True, 'tls_v1': True,
+        config = {'feature_negotiation': True, 'tls_v1': True,
                   'snappy': False, 'deflate': False
-        }
+                  }
 
-        yield from conn.identify(**config)
-        yield from self._pub_sub_rdy_fin(conn)
+        res = await conn.identify(**config)
+        self.assertTrue(res)
+        conn.close()
 
     @run_until_complete
-    def test_snappy(self):
-        conn = yield from create_connection(host=self.host, port=self.port,
-                                            loop=self.loop)
-
-        config = {'feature_negotiation':True, 'tls_v1': False,
+    async def test_snappy(self):
+        print("test_snappy 1")
+        conn = await create_connection(host=self.host, port=self.port,
+                                       loop=self.loop)
+        print("test_snappy conn")
+        config = {'feature_negotiation': True, 'tls_v1': False,
                   'snappy': True, 'deflate': False
-        }
+                  }
         self.assertIsInstance(conn._parser, Reader)
-        yield from conn.identify(**config)
+        config_res = await conn.identify(**config)
+        print("test_snappy config", config_res)
         self.assertIsInstance(conn._parser, SnappyReader)
-
-        yield from self._pub_sub_rdy_fin(conn)
+        print("test_snappy")
+        await self._pub_sub_rdy_fin(conn)
+        conn.close()
 
     @run_until_complete
-    def test_deflate(self):
-        conn = yield from create_connection(host=self.host, port=self.port,
-                                            loop=self.loop)
+    async def test_deflate(self):
+        conn = await create_connection(host=self.host, port=self.port,
+                                       loop=self.loop)
 
-        config = {'feature_negotiation':True, 'tls_v1': False,
+        config = {'feature_negotiation': True, 'tls_v1': False,
                   'snappy': False, 'deflate': True
-        }
+                  }
         self.assertIsInstance(conn._parser, Reader)
 
-        yield from conn.identify(**config)
+        nego_res = await conn.identify(**config)
+        print(nego_res)
         self.assertIsInstance(conn._parser, DeflateReader)
-        yield from self._pub_sub_rdy_fin(conn)
+        await self._pub_sub_rdy_fin(conn)
+        conn.close()
 
     @asyncio.coroutine
-    def _pub_sub_rdy_fin(self, conn):
-        ok = yield from conn.execute(b'PUB', b'foo', data=b'msg foo')
+    async def _pub_sub_rdy_fin(self, conn):
+        print("start _pub_sub_rdy_fin")
+        print(conn.closed)
+        ok = await conn.execute('PUB', 'foo', data=b'msg foo')
+        print("_pub_sub_rdy_fin pub data", ok)
         self.assertEqual(ok, b'OK')
-        yield from conn.execute(b'SUB', b'foo', b'bar')
-        yield from conn.execute(b'RDY', 1)
-        msg = yield from conn._queue.get()
+        await conn.execute(b'SUB', 'foo', 'bar')
+        await conn.execute(b'RDY', 1)
+        print("starting to get msg")
+        msg = await conn._queue.get()
+        print("get message", msg)
         self.assertEqual(msg.processed, False)
-        yield from msg.fin()
+        await msg.fin()
         self.assertEqual(msg.processed, True)
-        yield from conn.execute(b'CLS')
+        await conn.execute(b'CLS')
 
     @run_until_complete
-    def test_message(self):
-        conn = yield from create_connection(host=self.host, port=self.port,
-                                            loop=self.loop)
+    async def test_message(self):
+        conn = await create_connection(host=self.host, port=self.port,
+                                       loop=self.loop)
 
-        ok = yield from conn.execute(b'PUB', self.topic, data=b'boom')
+        ok = await conn.execute(b'PUB', self.topic, data=b'boom')
         self.assertEqual(ok, b'OK')
-        yield from conn.execute(b'SUB', self.topic,  b'bar')
-        yield from conn.execute(b'RDY', 1)
+        res = await conn.execute(b'SUB', self.topic,  'boom')
+        self.assertEqual(res, b"OK")
+        await conn.execute(b'RDY', 1)
 
-
-        msg = yield from conn._queue.get()
+        msg = await conn._queue.get()
         self.assertEqual(msg.processed, False)
 
-        yield from msg.touch()
+        await msg.touch()
         self.assertEqual(msg.processed, False)
-        yield from msg.req(1)
+        await msg.req(1)
         self.assertEqual(msg.processed, True)
-        yield from conn.execute(b'RDY', 1)
-        new_msg = yield from conn._queue.get()
-        yield from new_msg.fin()
+        await conn.execute(b'RDY', 1)
+        new_msg = await conn._queue.get()
+        res = await new_msg.fin()
+        self.assertEqual(res, b"OK")
         self.assertEqual(msg.processed, True)
 
-        yield from conn.execute(b'CLS')
+        await conn.execute(b'CLS')
+        conn.close()

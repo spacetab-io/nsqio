@@ -9,6 +9,7 @@ def run_until_complete(fun):
 
     @wraps(fun)
     def wrapper(test, *args, **kw):
+        print("decorator", test, test.loop, args, kw)
         loop = test.loop
         ret = loop.run_until_complete(fun(test, *args, **kw))
         return ret
@@ -20,9 +21,9 @@ class BaseTest(unittest.TestCase):
     """
 
     def setUp(self):
-        asyncio.set_event_loop(None)
-        self.loop = asyncio.new_event_loop()
+        self.loop = asyncio.get_event_loop()
 
     def tearDown(self):
-        self.loop.close()
-        del self.loop
+        pass
+        # self.loop.close()
+        # del self.loop
