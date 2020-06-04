@@ -92,7 +92,7 @@ class Reader:
                     loop=self._loop)
                 await self.prepare_conn(conn)
                 self._connections[conn.id] = conn
-            self._rdy_control.add_connections(self._connections)
+            self._rdy_control.add_connections(self._connections) #do we need to close conn in rdy_control?
         # init distribute for conns, init update rdy state for conn
         self._rdy_control.redistribute()
 
@@ -173,3 +173,8 @@ class Reader:
     async def _lookupd(self):
         host, port = random.choice(self._lookupd_http_addresses)
         await self._poll_lookupd(host, port)
+
+
+    def close(self):
+        for conn in self._connections:
+            conn.close()
