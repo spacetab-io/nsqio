@@ -1,13 +1,13 @@
 import asyncio
-import time
 import random
-from .consts import RDY
+from nsqio.tcp.consts import RDY
+
 REDISTRIBUTE = 0
 CHANGE_CONN_RDY = 1
+NOOP = 2
 
 
 class RdyControl:
-
     def __init__(self, idle_timeout, max_in_flight, loop=None):
         self._connections = {}
         self._idle_timeout = idle_timeout
@@ -45,6 +45,8 @@ class RdyControl:
                 await self._redistribute_rdy_state()
             elif cmd == CHANGE_CONN_RDY:
                 await self._update_rdy(*args)
+            elif cmd == NOOP:
+                continue
             else:
                 RuntimeError("Should never be here")
 
@@ -53,6 +55,11 @@ class RdyControl:
 
     def remove_all(self):
         self._connections = {}
+
+    def stop_working(self):
+        self._is_working = False
+        self._cmd_queue.put_nowait((NOOP, ()))
+        self.remove_all()
 
     async def _redistribute_rdy_state(self):
         # We redistribute RDY counts in a few cases:
@@ -81,9 +88,9 @@ class RdyControl:
         distributed_rdy = sum(c._in_flight for c in connections)
         not_distributed_rdy = self._max_in_flight - distributed_rdy
 
-        random_connections = random.sample(list(connections),
-                                           min(not_distributed_rdy,
-                                               len(connections)))
+        random_connections = random.sample(
+            list(connections), min(not_distributed_rdy, len(connections))
+        )
 
         rdy_coros = [conn.execute(RDY, 1) for conn in random_connections]
 
@@ -92,8 +99,7 @@ class RdyControl:
     async def _update_rdy(self, conn_id):
         conn = self._connections[conn_id]
         # this is the configuration max_in_flight split even on conn
-        base_conn_max_in_flight = self._max_in_flight / \
-            max(1, len(self._connections))
+        base_conn_max_in_flight = self._max_in_flight / max(1, len(self._connections))
 
         # this is the in_flight number of the conn_id's conn
         conn_in_flight = conn._in_flight

@@ -1,5 +1,5 @@
 from ._testutils import run_until_complete, BaseTest
-from asyncnsq.http.writer import NsqdHttpWriter
+from nsqio.http.writer import NsqdHttpWriter
 
 
 class NsqdHttpWriterTest(BaseTest):

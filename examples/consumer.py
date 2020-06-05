@@ -1,9 +1,6 @@
 import asyncio
-import sys
-import os
-import logging
-from asyncnsq import create_reader
-from asyncnsq.utils import get_logger
+from nsqio import create_reader
+from nsqio.utils import get_logger
 
 logger = get_logger()
 
@@ -15,10 +12,9 @@ def main():
     async def go():
         try:
             reader = await create_reader(
-                lookupd_http_addresses=[
-                    ('127.0.0.1', 4161)],
-                max_in_flight=200)
-            await reader.subscribe('test_async_nsq', 'nsq')
+                lookupd_http_addresses=[("127.0.0.1", 4161)], max_in_flight=200
+            )
+            await reader.subscribe("test_async_nsq", "nsq")
             async for message in reader.messages():
                 print(message.body)
                 await message.fin()
@@ -35,9 +31,9 @@ def tcp_main():
     async def go():
         try:
             reader = await create_reader(
-                nsqd_tcp_addresses=['127.0.0.1:4150'],
-                max_in_flight=200)
-            await reader.subscribe('test_async_nsq', 'nsq')
+                nsqd_tcp_addresses=["127.0.0.1:4150"], max_in_flight=200
+            )
+            await reader.subscribe("test_async_nsq", "nsq")
             async for message in reader.messages():
                 print(message.body)
                 await message.fin()
@@ -47,6 +43,6 @@ def tcp_main():
     loop.run_until_complete(go())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # main()
     tcp_main()

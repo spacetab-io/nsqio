@@ -29,6 +29,6 @@ install:
     - pip install -e .
 
 script:
-    - pyflakes asyncnsq tests
-    - pep8 asyncnsq tests
+    - pyflakes nsqio tests
+    - pep8 nsqio tests
     - python runtests.py -v

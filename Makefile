@@ -9,8 +9,8 @@ doc:
 	make -C docs html
 
 flake:
-	$(FLAKE) asyncnsq tests examples
-	$(PEP) asyncnsq tests examples
+	$(FLAKE) nsqio tests examples
+	$(PEP) nsqio tests examples
 
 test:
 	$(PYTHON) runtests.py -v 4
@@ -19,7 +19,7 @@ cov coverage:
 	$(PYTHON) runtests.py --coverage
 
 dist:
-	-rm -r build dist asyncnsq.egg-info
+	-rm -r build dist nsqio.egg-info
 	$(PYTHON) setup.py sdist bdist_wheel
 
 clean:
@@ -34,4 +34,4 @@ clean:
 	rm -f .coverage
 	rm -rf coverage
 	rm -rf docs/_build
-	rm -rf build dist asyncnsq.egg-info
+	rm -rf build dist nsqio.egg-info

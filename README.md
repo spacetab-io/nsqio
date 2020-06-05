@@ -1,6 +1,6 @@
-# asyncnsq
-[![Downloads](https://pepy.tech/badge/asyncnsq)](https://pepy.tech/project/asyncnsq)
-[![PyPI version](https://badge.fury.io/py/asyncnsq.svg)](https://badge.fury.io/py/asyncnsq)
+# nsqio
+[![Downloads](https://pepy.tech/badge/nsqio)](https://pepy.tech/project/nsqio)
+[![PyPI version](https://badge.fury.io/py/nsqio.svg)](https://badge.fury.io/py/nsqio)
 
 ## async nsq with asyncio
 
@@ -10,11 +10,11 @@ you can use this library as the common way to write things
 
 ## Important
 
-* #### from version 1.0.0 asyncnsq  has a break change in api
+* #### from version 1.0.0 nsqio  has a break change in api
 
 * #### it is not stable yet
 
-* #### you may want to use stable " pip install asyncnsq==0.4.5"
+* #### you may want to use stable " pip install nsqio==0.4.5"
 
 ## Features
 
@@ -53,7 +53,7 @@ you can use this library as the common way to write things
 
 --------------
 
-pip install asyncnsq
+pip install nsqio
 
 ## Usage examples
 
@@ -64,8 +64,8 @@ All you need is a loop, then enjoy. you can refer to examples, as well.
 Consumer:
 
 ```python
-from asyncnsq import create_reader
-from asyncnsq.utils import get_logger
+from nsqio import create_reader
+from nsqio.utils import get_logger
 
 loop = asyncio.get_event_loop()
 async def go():
@@ -84,7 +84,7 @@ loop.run_until_complete(go())
 
 Producer:
 ```python
-from asyncnsq import create_writer
+from nsqio import create_writer
 loop = asyncio.get_event_loop()
 async def go():
     writer = await create_writer(host='127.0.0.1', port=4150,
@@ -122,4 +122,4 @@ Requirements
 License
 -------
 
-The asyncnsq is offered under MIT license.
+The nsqio is offered under MIT license.

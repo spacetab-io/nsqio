@@ -1,7 +1,6 @@
-import asyncio
 from ._testutils import run_until_complete, BaseTest
-from asyncnsq.tcp.reader import create_reader
-from asyncnsq.tcp.writer import create_writer
+from nsqio.tcp.reader import create_reader
+from nsqio.tcp.writer import create_writer
 
 
 class NsqTest(BaseTest):

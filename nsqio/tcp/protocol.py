@@ -8,19 +8,27 @@ import zlib
 import snappy
 import logging
 
-from . import consts
-from .exceptions import ProtocolError
-from ..utils import _convert_to_bytes
+from nsqio.tcp.consts import (
+    DATA_SIZE,
+    FRAME_SIZE,
+    FRAME_TYPE_RESPONSE,
+    FRAME_TYPE_ERROR,
+    FRAME_TYPE_MESSAGE,
+    MSG_HEADER,
+    NL,
+)
+
+from nsqio.tcp.exceptions import ProtocolError
+from nsqio.utils import _convert_to_bytes
 
 logger = logging.getLogger(__package__)
 
 
-__all__ = ['Reader', 'DeflateReader', 'SnappyReader']
+__all__ = ["Reader", "DeflateReader", "SnappyReader"]
 
 
 class BaseReader(metaclass=abc.ABCMeta):
-
-    @abc.abstractmethod   # pragma: no cover
+    @abc.abstractmethod  # pragma: no cover
     def feed(self, chunk):
         """
 
@@ -34,7 +42,7 @@ class BaseReader(metaclass=abc.ABCMeta):
         :return:
         """
 
-    @abc.abstractmethod   # pragma: no cover
+    @abc.abstractmethod  # pragma: no cover
     def encode_command(self, cmd, *args, data=None):
         """
 
@@ -43,7 +51,6 @@ class BaseReader(metaclass=abc.ABCMeta):
 
 
 class BaseCompressReader(BaseReader):
-
     @abc.abstractmethod  # pragma: no cover
     def compress(self, data):
         """
@@ -76,7 +83,6 @@ class BaseCompressReader(BaseReader):
 
 
 class DeflateReader(BaseCompressReader):
-
     def __init__(self, buffer=None, level=6):
         self._parser = Reader()
         wbits = -zlib.MAX_WBITS
@@ -94,7 +100,6 @@ class DeflateReader(BaseCompressReader):
 
 
 class SnappyReader(BaseCompressReader):
-
     def __init__(self, buffer=None):
         self._parser = Reader()
         self._decompressor = snappy.StreamDecompressor()
@@ -111,12 +116,11 @@ class SnappyReader(BaseCompressReader):
 
 def _encode_body(data):
     _data = _convert_to_bytes(data)
-    result = struct.pack('>l', len(_data)) + _data
+    result = struct.pack(">l", len(_data)) + _data
     return result
 
 
 class Reader(BaseReader):
-
     def __init__(self, buffer=None):
 
         self._buffer = bytearray()
@@ -139,22 +143,23 @@ class Reader(BaseReader):
 
     def gets(self):
         buffer_size = len(self._buffer)
-        if not self._is_header and buffer_size >= consts.DATA_SIZE:
-            size = struct.unpack('>l', self._buffer[:consts.DATA_SIZE])[0]
+        if not self._is_header and buffer_size >= DATA_SIZE:
+            size = struct.unpack(">l", self._buffer[:DATA_SIZE])[0]
             self._payload_size = size
             self._is_header = True
 
-        if (self._is_header and buffer_size >=
-                consts.DATA_SIZE + self._payload_size):
+        if self._is_header and buffer_size >= DATA_SIZE + self._payload_size:
 
-            start, end = consts.DATA_SIZE, consts.DATA_SIZE + consts.FRAME_SIZE
+            start, end = DATA_SIZE, DATA_SIZE + FRAME_SIZE
 
-            self._frame_type = struct.unpack('>l', self._buffer[start:end])[0]
+            self._frame_type = struct.unpack(">l", self._buffer[start:end])[0]
             # temp neglect for frame error.
             # todo
-            if self._frame_type not in (consts.FRAME_TYPE_RESPONSE,
-                                        consts.FRAME_TYPE_ERROR,
-                                        consts.FRAME_TYPE_MESSAGE):
+            if self._frame_type not in (
+                FRAME_TYPE_RESPONSE,
+                FRAME_TYPE_ERROR,
+                FRAME_TYPE_MESSAGE,
+            ):
                 logger.debug(f"_frame_type error-> {self._frame_type}")
                 self._reset()
                 return False
@@ -164,7 +169,7 @@ class Reader(BaseReader):
         return False
 
     def _reset(self):
-        start = consts.DATA_SIZE + self._payload_size
+        start = DATA_SIZE + self._payload_size
         self._buffer = self._buffer[start:]
         self._is_header = False
         self._payload_size = None
@@ -173,34 +178,34 @@ class Reader(BaseReader):
     def _parse_payload(self):
 
         response_type, response = self._frame_type, None
-        if response_type == consts.FRAME_TYPE_RESPONSE:
+        if response_type == FRAME_TYPE_RESPONSE:
             response = self._unpack_response()
-        elif response_type == consts.FRAME_TYPE_ERROR:
+        elif response_type == FRAME_TYPE_ERROR:
             response = self._unpack_error()
-        elif response_type == consts.FRAME_TYPE_MESSAGE:
+        elif response_type == FRAME_TYPE_MESSAGE:
             response = self._unpack_message()
         else:
             raise ProtocolError()
         return response_type, response
 
     def _unpack_error(self):
-        start = consts.DATA_SIZE + consts.FRAME_SIZE
-        end = consts.DATA_SIZE + self._payload_size
+        start = DATA_SIZE + FRAME_SIZE
+        end = DATA_SIZE + self._payload_size
         error = bytes(self._buffer[start:end])
         code, msg = error.split(None, 1)
         return code, msg
 
     def _unpack_response(self):
-        start = consts.DATA_SIZE + consts.FRAME_SIZE
-        end = consts.DATA_SIZE + self._payload_size
+        start = DATA_SIZE + FRAME_SIZE
+        end = DATA_SIZE + self._payload_size
         body = bytes(self._buffer[start:end])
         return body
 
     def _unpack_message(self):
-        start = consts.DATA_SIZE + consts.FRAME_SIZE
-        end = consts.DATA_SIZE + self._payload_size
-        msg_len = end - start - consts.MSG_HEADER
-        fmt = '>qh16s{}s'.format(msg_len)
+        start = DATA_SIZE + FRAME_SIZE
+        end = DATA_SIZE + self._payload_size
+        msg_len = end - start - MSG_HEADER
+        fmt = ">qh16s{}s".format(msg_len)
         payload = struct.unpack(fmt, self._buffer[start:end])
         timestamp, attempts, msg_id, body = payload
         return timestamp, attempts, msg_id, body
@@ -209,17 +214,17 @@ class Reader(BaseReader):
         """XXX"""
         _cmd = _convert_to_bytes(cmd.upper().strip())
         _args = [_convert_to_bytes(a) for a in args]
-        body_data, params_data = b'', b''
+        body_data, params_data = b"", b""
 
         if len(_args):
-            params_data = b' ' + b' '.join(_args)
+            params_data = b" " + b" ".join(_args)
 
         if data and isinstance(data, (list, tuple)):
             data_encoded = [_encode_body(part) for part in data]
             num_parts = len(data_encoded)
-            payload = struct.pack('>l', num_parts) + b''.join(data_encoded)
-            body_data = struct.pack('>l', len(payload)) + payload
+            payload = struct.pack(">l", num_parts) + b"".join(data_encoded)
+            body_data = struct.pack(">l", len(payload)) + payload
         elif data:
             body_data = _encode_body(data)
 
-        return b''.join((_cmd, params_data, consts.NL, body_data))
+        return b"".join((_cmd, params_data, NL, body_data))

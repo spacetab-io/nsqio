@@ -1,5 +1,5 @@
 
-"""Run asyncnsq unittests.
+"""Run nsqio unittests.
 
 Usage:
   python3 runtests.py [flags] [pattern] ...
@@ -31,6 +31,7 @@ import unittest
 import traceback
 import textwrap
 import importlib.machinery
+from nsqio.utils import get_logger
 try:
     import coverage
 except ImportError:
@@ -241,23 +242,13 @@ def runtests():
 
     if args.coverage:
         cov = coverage.coverage(branch=True,
-                                source=['asyncnsq'],
+                                source=['nsqio'],
                                 )
         cov.start()
 
     finder = TestsFinder(args.testsdir, includes, excludes,
                          verbose=args.verbose)
-    self.logger = logging.getself.logger()
-    if v == 0:
-        self.logger.setLevel(logging.CRITICAL)
-    elif v == 1:
-        self.logger.setLevel(logging.ERROR)
-    elif v == 2:
-        self.logger.setLevel(logging.WARNING)
-    elif v == 3:
-        self.logger.setLevel(logging.INFO)
-    elif v >= 4:
-        self.logger.setLevel(logging.DEBUG)
+    logger = get_logger(level=logging.DEBUG)
     if catchbreak:
         installHandler()
     try:

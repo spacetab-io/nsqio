@@ -1,22 +1,23 @@
 import random
 import re
+import logzero
 import logging
 from urllib.parse import urlparse
 
 
-TOPIC_NAME_RE = re.compile(r'^[\.a-zA-Z0-9_-]+$')
-CHANNEL_NAME_RE = re.compile(r'^[\.a-zA-Z0-9_-]+(#ephemeral)?$')
+TOPIC_NAME_RE = re.compile(r"^[\.a-zA-Z0-9_-]+$")
+CHANNEL_NAME_RE = re.compile(r"^[\.a-zA-Z0-9_-]+(#ephemeral)?$")
 
 
 def get_host_and_port(host):
     host_parsed = urlparse(host)
-    if host_parsed.scheme == 'tcp':
+    if host_parsed.scheme == "tcp":
         result = host_parsed.netloc
-    elif host_parsed.scheme == '':
+    elif host_parsed.scheme == "":
         result = host_parsed.path
     else:
         result = host
-    result = result.split(':')
+    result = result.split(":")
     if len(result) == 2:
         return result[0], result[-1]
     else:
@@ -38,16 +39,16 @@ def valid_channel_name(channel):
 _converters_to_bytes_map = {
     bytes: lambda val: val,
     bytearray: lambda val: val,
-    str: lambda val: val.encode('utf-8'),
-    int: lambda val: str(val).encode('utf-8'),
-    float: lambda val: str(val).encode('utf-8'),
+    str: lambda val: val.encode("utf-8"),
+    int: lambda val: str(val).encode("utf-8"),
+    float: lambda val: str(val).encode("utf-8"),
 }
 
 
 _converters_to_str_map = {
     str: lambda val: val,
-    bytearray: lambda val: bytes(val).decode('utf-8'),
-    bytes: lambda val: val.decode('utf-8'),
+    bytearray: lambda val: bytes(val).decode("utf-8"),
+    bytes: lambda val: val.decode("utf-8"),
     int: lambda val: str(val),
     float: lambda val: str(val),
 }
@@ -57,8 +58,10 @@ def _convert_to_bytes(value):
     if type(value) in _converters_to_bytes_map:
         converted_value = _converters_to_bytes_map[type(value)](value)
     else:
-        raise TypeError("Argument {!r} expected to be of bytes,"
-                        " str, int or float type".format(value))
+        raise TypeError(
+            "Argument {!r} expected to be of bytes,"
+            " str, int or float type".format(value)
+        )
     return converted_value
 
 
@@ -66,8 +69,10 @@ def _convert_to_str(value):
     if type(value) in _converters_to_str_map:
         converted_value = _converters_to_str_map[type(value)](value)
     else:
-        raise TypeError("Argument {!r} expected to be of bytes,"
-                        " str, int or float type".format(value))
+        raise TypeError(
+            "Argument {!r} expected to be of bytes,"
+            " str, int or float type".format(value)
+        )
     return converted_value
 
 
@@ -75,8 +80,14 @@ class MaxRetriesExided(Exception):
     pass
 
 
-def retry_iterator(init_delay=0.1, max_delay=10.0, factor=2.7182818284590451,
-                   jitter=0.11962656472, max_retries=None, now=True):
+def retry_iterator(
+    init_delay=0.1,
+    max_delay=10.0,
+    factor=2.7182818284590451,
+    jitter=0.11962656472,
+    max_retries=None,
+    now=True,
+):
     """Based on twisted reconnection factory.
 
     :param init_delay:
@@ -94,20 +105,13 @@ def retry_iterator(init_delay=0.1, max_delay=10.0, factor=2.7182818284590451,
     while not max_retries or retries < max_retries:
         retries += 1
         delay *= factor
-        delay = random.normalvariate(
-            delay, delay * jitter) if jitter else delay
+        delay = random.normalvariate(delay, delay * jitter) if jitter else delay
         delay = min(delay, max_delay) if max_delay else delay
         yield delay
     else:
         raise MaxRetriesExided()
 
 
-def get_logger(log_level=None):
-    logger = logging.getLogger("AsyncNsq")
-    FORMAT = "%(asctime)s - %(name)s - %(levelname)s - \n%(message)s"
-    logging.basicConfig(format=FORMAT)
-    if log_level == 'debug':
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.INFO)
+def get_logger(level=logging.INFO):
+    logger = logzero.setup_logger("nsqio", level=level)
     return logger

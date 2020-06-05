@@ -1,17 +1,15 @@
 from collections import namedtuple
-from .consts import TOUCH, REQ, FIN
+from nsqio.tcp.consts import TOUCH, REQ, FIN
 
 
-__all__ = ['NsqMessage', 'NsqErrorMessage']
+__all__ = ["NsqMessage", "NsqErrorMessage"]
 
 
-NsqErrorMessage = namedtuple('NsqError', ['code', 'msg'])
-BaseMessage = namedtuple('NsqMessage',
-                         'timestamp attempts message_id body conn')
+NsqErrorMessage = namedtuple("NsqError", ["code", "msg"])
+BaseMessage = namedtuple("NsqMessage", "timestamp attempts message_id body conn")
 
 
 class NsqMessage(BaseMessage):
-
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls, *args, **kwargs)
         self._is_processed = False

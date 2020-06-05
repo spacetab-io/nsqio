@@ -1,5 +1,5 @@
 import unittest
-from asyncnsq.tcp.protocol import Reader
+from nsqio.tcp.protocol import Reader
 
 
 class ParserTest(unittest.TestCase):

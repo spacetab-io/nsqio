@@ -1,8 +1,8 @@
 import asyncio
 from ._testutils import run_until_complete, BaseTest
-from asyncnsq.tcp.connection import create_connection, TcpConnection
-from asyncnsq.http.writer import NsqdHttpWriter
-from asyncnsq.tcp.protocol import Reader, SnappyReader, DeflateReader
+from nsqio.tcp.connection import create_connection, TcpConnection
+from nsqio.http.writer import NsqdHttpWriter
+from nsqio.tcp.protocol import Reader, SnappyReader, DeflateReader
 
 
 class NsqConnectionTest(BaseTest):
