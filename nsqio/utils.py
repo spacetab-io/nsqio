@@ -4,7 +4,6 @@ import logzero
 import logging
 from urllib.parse import urlparse
 
-
 TOPIC_NAME_RE = re.compile(r"^[\.a-zA-Z0-9_-]+$")
 CHANNEL_NAME_RE = re.compile(r"^[\.a-zA-Z0-9_-]+(#ephemeral)?$")
 
@@ -112,6 +111,27 @@ def retry_iterator(
         raise MaxRetriesExided()
 
 
-def get_logger(level=logging.INFO):
-    logger = logzero.setup_logger("nsqio", level=level)
+def setup_logger(
+    logfile=None,
+    level=logging.DEBUG,
+    formatter=None,
+    maxBytes=0,
+    backupCount=0,
+    fileLoglevel=None,
+    disableStderrLogger=False,
+):
+    logger = logzero.setup_logger(
+        "nsqio",
+        logfile=logfile,
+        level=level,
+        formatter=formatter,
+        maxBytes=maxBytes,
+        backupCount=backupCount,
+        fileLoglevel=fileLoglevel,
+        disableStderrLogger=disableStderrLogger,
+    )
     return logger
+
+
+def get_logger():
+    return setup_logger()
