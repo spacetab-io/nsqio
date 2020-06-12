@@ -9,7 +9,7 @@ from nsqio.http import NsqLookupd
 from nsqio.tcp.reader_rdy import RdyControl
 from nsqio.tcp.connection import create_connection
 from nsqio.tcp.consts import SUB, RDY, CLS
-from nsqio.utils import get_logger
+from nsqio.utils import get_logger, get_host_and_port
 
 
 logger = get_logger()
@@ -39,7 +39,7 @@ async def create_reader(
     else:
         if nsqd_tcp_addresses is None:
             nsqd_tcp_addresses = ["127.0.0.1:4150"]
-        nsqd_tcp_addresses = [i.split(":") for i in nsqd_tcp_addresses]
+        nsqd_tcp_addresses = [get_host_and_port(i) for i in nsqd_tcp_addresses]
         reader = Reader(
             nsqd_tcp_addresses=nsqd_tcp_addresses,
             max_in_flight=max_in_flight,
@@ -135,39 +135,56 @@ class Reader:
         return msg
 
     async def _poll_lookupd(self, host, port):
-        nsqlookup_conn = NsqLookupd(host, port, loop=self._loop)
         try:
-            res = await nsqlookup_conn.lookup(self.topic)
-            logger.info("lookupd response")
-            logger.info(res)
-        except Exception as tmp:
-            logger.error(tmp)
-            logger.exception(tmp)
+            nsqlookup_conn = NsqLookupd(host, port, loop=self._loop)
 
-        for producer in res["producers"]:
-            host = producer["broadcast_address"]
-            port = producer["tcp_port"]
-            tmp_id = "tcp://{}:{}".format(host, port)
-            if tmp_id not in self._connections:
-                logger.debug(("host, port", host, port))
-                conn = await create_connection(
-                    host, port, queue=self._queue, loop=self._loop
-                )
-                logger.debug(("conn.id:", conn.id))
-                self._connections[conn.id] = conn
-                self._rdy_control.add_connection(conn)
-        await nsqlookup_conn.close()
+            res = await nsqlookup_conn.lookup(self.topic)
+            logger.debug("lookupd response {}".format(res))
+
+            if "producers" in res:
+                for producer in res["producers"]:
+                    host = producer["broadcast_address"]
+                    port = producer["tcp_port"]
+                    tmp_id = "tcp://{}:{}".format(host, port)
+                    if tmp_id not in self._connections:
+                        logger.debug(("host, port", host, port))
+                        conn = await create_connection(
+                            host, port, queue=self._queue, loop=self._loop
+                        )
+                        logger.debug(("conn.id:", conn.id))
+                        self._connections[conn.id] = conn
+                        self._rdy_control.add_connection(conn)
+                return True
+            else:
+                logger.error("producers not found error")
+                return False
+        except Exception as e:
+            logger.error(e)
+            # logger.exception(tmp)
+            try:
+                await nsqlookup_conn.close()
+            except Exception as e:
+                logger.error(e)
+            return False
 
     async def subscribe(self, topic, channel):
         self.topic = topic
         self._is_subscribe = True
+
+        # firstly, we check lookupd
         if self._lookupd_http_addresses:
-            await self._lookupd()
+            lookupd_status = await self._lookupd()
+            if not lookupd_status:
+                logger.error("lookupd failed!")
+                return False
+
+        # and then, we sub all available topics
         for conn in self._connections.values():
             await self.sub(conn, topic, channel)
             if conn._on_rdy_changed_cb is not None:
                 conn._on_rdy_changed_cb(conn.id)
 
+        return True
         # redistribute is a task for fail or overload to
         # rebalance tcpconnections
         # consider for further. disable now
@@ -181,6 +198,9 @@ class Reader:
             conn.execute(RDY, max_in_flight)
 
     async def send_cls(self):
+        """ CLS 
+            Cleanly close your connection (no more messages are sent)
+        """
         for conn in self._connections.values():
             conn.execute(CLS)
 
@@ -209,7 +229,7 @@ class Reader:
 
     async def _lookupd(self):
         host, port = random.choice(self._lookupd_http_addresses)
-        await self._poll_lookupd(host, port)
+        return await self._poll_lookupd(host, port)
 
     async def unsubscribe(self):
         if not self._is_subscribe:

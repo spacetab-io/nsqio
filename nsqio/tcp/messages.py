@@ -1,5 +1,6 @@
 from collections import namedtuple
 from nsqio.tcp.consts import TOUCH, REQ, FIN
+from nsqio.utils import get_logger
 
 
 __all__ = ["NsqMessage", "NsqErrorMessage"]
@@ -7,6 +8,8 @@ __all__ = ["NsqMessage", "NsqErrorMessage"]
 
 NsqErrorMessage = namedtuple("NsqError", ["code", "msg"])
 BaseMessage = namedtuple("NsqMessage", "timestamp attempts message_id body conn")
+
+logger = get_logger()
 
 
 class NsqMessage(BaseMessage):
@@ -26,7 +29,9 @@ class NsqMessage(BaseMessage):
         :raises RuntimeWarning: in case message was processed earlier.
         """
         if self._is_processed:
-            raise RuntimeWarning("Message has already been processed")
+            # raise RuntimeWarning("Message has already been processed")
+            logger.warning("{} has already been processed".format(self))
+            return None
         resp = await self.conn.execute(FIN, self.message_id)
         self._is_processed = True
         return resp
@@ -39,7 +44,8 @@ class NsqMessage(BaseMessage):
         :raises RuntimeWarning: in case message was processed earlier.
         """
         if self._is_processed:
-            raise RuntimeWarning("Message has already been processed")
+            logger.warning("{} has already been processed".format(self))
+            return None
         resp = await self.conn.execute(REQ, self.message_id, timeout)
         self._is_processed = True
         return resp
@@ -49,5 +55,9 @@ class NsqMessage(BaseMessage):
         :raises RuntimeWarning: in case message was processed earlier.
         """
         if self._is_processed:
-            raise RuntimeWarning("Message has already been processed")
+            logger.warning("{} has already been processed".format(self))
+            return None
         return await self.conn.execute(TOUCH, self.message_id)
+
+    def __repr__(self):
+        return "<NsqMessage{}@{}>".format(self.message_id, self.conn)

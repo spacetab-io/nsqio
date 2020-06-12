@@ -2,19 +2,13 @@
 [![Downloads](https://pepy.tech/badge/nsqio)](https://pepy.tech/project/nsqio)
 [![PyPI version](https://badge.fury.io/py/nsqio.svg)](https://badge.fury.io/py/nsqio)
 
-## async nsq with asyncio
-
 **if you dont like the pynsq(which use tornado) way to interact with nsq, then this library may be suitable for you**
 
 you can use this library as the common way to write things
 
 ## Important
 
-* #### from version 1.0.0 nsqio  has a break change in api
-
 * #### it is not stable yet
-
-* #### you may want to use stable " pip install nsqio==0.4.5"
 
 ## Features
 
