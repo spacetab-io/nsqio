@@ -15,11 +15,11 @@ from nsqio.tcp.consts import (
 )
 
 from nsqio.tcp.messages import NsqMessage
-from .exceptions import ProtocolError  # , make_error
-from .protocol import Reader, DeflateReader, SnappyReader
+from nsqio.utils import get_logger
+from nsqio.tcp.exceptions import ProtocolError  # , make_error
+from nsqio.tcp.protocol import Reader, DeflateReader, SnappyReader
 
-logger = logging.getLogger(__package__)
-
+logger = get_logger()
 
 async def create_connection(host="localhost", port=4150, queue=None, loop=None):
     """create nsq tcp connection
