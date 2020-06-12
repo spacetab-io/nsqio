@@ -26,10 +26,8 @@ class NsqMessage(BaseMessage):
     async def fin(self):
         """Finish a message (indicate successful processing)
 
-        :raises RuntimeWarning: in case message was processed earlier.
         """
         if self._is_processed:
-            # raise RuntimeWarning("Message has already been processed")
             logger.warning("{} has already been processed".format(self))
             return None
         resp = await self.conn.execute(FIN, self.message_id)
@@ -41,7 +39,7 @@ class NsqMessage(BaseMessage):
 
         :param timeout: ``int`` configured max timeout  0 is a special case
             that will not defer re-queueing.
-        :raises RuntimeWarning: in case message was processed earlier.
+
         """
         if self._is_processed:
             logger.warning("{} has already been processed".format(self))
@@ -52,7 +50,6 @@ class NsqMessage(BaseMessage):
 
     async def touch(self):
         """Reset the timeout for an in-flight message.
-        :raises RuntimeWarning: in case message was processed earlier.
         """
         if self._is_processed:
             logger.warning("{} has already been processed".format(self))
