@@ -206,7 +206,8 @@ class Reader:
 
     async def messages(self):
         if not self._is_subscribe:
-            raise ValueError("You must subscribe to the topic first")
+            logger.warning("You must subscribe to the topic first")
+            return
 
         try:
             logger.debug("num readers ++ ")
@@ -236,7 +237,8 @@ class Reader:
 
     async def unsubscribe(self):
         if not self._is_subscribe:
-            raise ValueError("You must subscribe to the topic first")
+            logger.warning("You must subscribe to the topic first")
+            return
         # logger.debug("unsubscribing {}".format(self))
         # mark as disabled
         await self.set_max_in_flight(0)
