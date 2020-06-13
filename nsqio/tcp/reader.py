@@ -184,11 +184,11 @@ class Reader:
             if conn._on_rdy_changed_cb is not None:
                 conn._on_rdy_changed_cb(conn.id)
 
-        return True
         # redistribute is a task for fail or overload to
         # rebalance tcpconnections
         # consider for further. disable now
         # self._redistribute_task = self._loop.create_task(self._redistribute())
+        return True
 
     async def sub(self, conn, topic, channel):
         await conn.execute(SUB, topic, channel)
@@ -230,6 +230,9 @@ class Reader:
     async def _lookupd(self):
         host, port = random.choice(self._lookupd_http_addresses)
         return await self._poll_lookupd(host, port)
+
+    async def rescan_connections(self):
+        return await self._lookupd()
 
     async def unsubscribe(self):
         if not self._is_subscribe:
