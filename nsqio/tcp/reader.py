@@ -9,7 +9,7 @@ from nsqio.http import NsqLookupd
 from nsqio.tcp.reader_rdy import RdyControl
 from nsqio.tcp.connection import create_connection
 from nsqio.tcp.consts import SUB, RDY, CLS
-from nsqio.utils import get_logger, get_host_and_port
+from nsqio.utils import get_logger, get_host_and_port, retry_iterator
 
 
 logger = get_logger()
@@ -20,7 +20,7 @@ async def create_reader(
     loop=None,
     max_in_flight=42,
     lookupd_http_addresses=None,
-    **kwargs
+    **kwargs,
 ):
     """"
     initial function to get consumer
@@ -44,7 +44,7 @@ async def create_reader(
             nsqd_tcp_addresses=nsqd_tcp_addresses,
             max_in_flight=max_in_flight,
             loop=loop,
-            **kwargs
+            **kwargs,
         )
     await reader.connect()
     return reader
@@ -99,11 +99,14 @@ class Reader:
         self._redistribute_timeout = 5  # sec
         self._lookupd_poll_time = 30  # sec
         self.topic = None
+        self.channel = None
         self._rdy_control = RdyControl(
             idle_timeout=self._idle_timeout,
             max_in_flight=self._max_in_flight,
             loop=self._loop,
         )
+        self._auto_poll_lookupd_task_closed = asyncio.Event(loop=self._loop)
+        self._auto_poll_lookupd_task = None
 
     async def connect(self):
         logging.info("reader connecting")
@@ -135,6 +138,7 @@ class Reader:
         return msg
 
     async def _poll_lookupd(self, host, port):
+        nsqlookup_conn = None
         try:
             nsqlookup_conn = NsqLookupd(host, port, loop=self._loop)
 
@@ -142,33 +146,113 @@ class Reader:
             logger.debug("lookupd response {}".format(res))
 
             if "producers" in res:
+                addrs = []
                 for producer in res["producers"]:
                     host = producer["broadcast_address"]
                     port = producer["tcp_port"]
-                    tmp_id = "tcp://{}:{}".format(host, port)
-                    if tmp_id not in self._connections:
-                        logger.debug(("host, port", host, port))
-                        conn = await create_connection(
-                            host, port, queue=self._queue, loop=self._loop
-                        )
-                        logger.debug(("conn.id:", conn.id))
-                        self._connections[conn.id] = conn
-                        self._rdy_control.add_connection(conn)
-                return True
+                    addrs.append((host, port))
+                return addrs
             else:
                 logger.error("producers not found error")
-                return False
+                return []
         except Exception as e:
             logger.error(e)
-            # logger.exception(tmp)
+            return []
+        finally:
+            if nsqlookup_conn is not None:
+                try:
+                    await nsqlookup_conn.close()
+                except Exception as e:
+                    logger.error(e)
+
+    async def _init_lookupd_conns(self, host, port):
+        producers = await self._poll_lookupd(host, port)
+        if len(producers) == 0:
+            # no producer
+            return False
+        for producer in producers:
             try:
-                await nsqlookup_conn.close()
+                p_host, p_port = producer
+                tmp_id = "tcp://{}:{}".format(p_host, p_port)
+                if tmp_id not in self._connections:
+                    logger.debug(
+                        "new connection: host={}, port={}".format(p_host, p_port)
+                    )
+                    conn = await create_connection(
+                        host=p_host, port=p_port, queue=self._queue, loop=self._loop
+                    )
+                    logger.debug("conn.id={}".format(conn.id))
+                    self._connections[conn.id] = conn
+                    self._rdy_control.add_connection(conn)
             except Exception as e:
                 logger.error(e)
-            return False
+                return False
+        return True
+
+    async def _auto_poll_lookupd(self):
+        logger.debug("starting _auto_poll_lookupd")
+        timeout_generator = retry_iterator(init_delay=1, max_delay=30.0)
+        try:
+            while (
+                self._is_subscribe
+                and self.topic is not None
+                and self.channel is not None
+            ):
+                logger.info("reader _auto_poll_lookupd check loop")
+                host, port = random.choice(self._lookupd_http_addresses)
+                producers = await self._poll_lookupd(host, port)
+                if len(producers) > 0:
+                    # no producer
+                    for producer in producers:
+                        conn = None
+                        try:
+                            p_host, p_port = producer
+                            tmp_id = "tcp://{}:{}".format(p_host, p_port)
+                            if tmp_id not in self._connections:
+                                logger.debug(
+                                    "_auto_poll_lookupd: new connection: host={}, port={}".format(
+                                        p_host, p_port
+                                    )
+                                )
+                                conn = await create_connection(
+                                    host=p_host,
+                                    port=p_port,
+                                    queue=self._queue,
+                                    loop=self._loop,
+                                )
+                                logger.debug("conn.id={}".format(conn.id))
+                                self._connections[conn.id] = conn
+                                self._rdy_control.add_connection(conn)
+
+                                await self.sub(conn, self.topic, self.channel)
+
+                                logger.debug(
+                                    "new nsqd added: conn.id={}".format(conn.id)
+                                )
+
+                                # why?
+                                if conn._on_rdy_changed_cb is not None:
+                                    conn._on_rdy_changed_cb(conn.id)
+                            # else:
+                            #     logger.debug("skip... {}".format(tmp_id))
+                        except Exception as e:
+                            logger.error(e)
+                            if conn is not None:
+                                try:
+                                    conn.close()
+                                except Exception as e:
+                                    logger.error(e)
+
+                t = next(timeout_generator)
+                await asyncio.sleep(t, loop=self._loop)
+        except asyncio.CancelledError:
+            logger.info("{} _auto_poll_lookupd".format(self))
+        finally:
+            self._auto_poll_lookupd_task_closed.set()
 
     async def subscribe(self, topic, channel):
         self.topic = topic
+        self.channel = channel
         self._is_subscribe = True
 
         # firstly, we check lookupd
@@ -177,6 +261,9 @@ class Reader:
             if not lookupd_status:
                 logger.error("lookupd failed!")
                 return False
+            self._auto_poll_lookupd_task = self._loop.create_task(
+                self._auto_poll_lookupd()
+            )
 
         # and then, we sub all available topics
         for conn in self._connections.values():
@@ -195,14 +282,14 @@ class Reader:
 
     async def set_max_in_flight(self, max_in_flight):
         for conn in self._connections.values():
-            conn.execute(RDY, max_in_flight)
+            await conn.execute(RDY, max_in_flight)
 
     async def send_cls(self):
         """ CLS 
             Cleanly close your connection (no more messages are sent)
         """
         for conn in self._connections.values():
-            conn.execute(CLS)
+            await conn.execute(CLS)
 
     async def messages(self):
         if not self._is_subscribe:
@@ -230,7 +317,7 @@ class Reader:
 
     async def _lookupd(self):
         host, port = random.choice(self._lookupd_http_addresses)
-        return await self._poll_lookupd(host, port)
+        return await self._init_lookupd_conns(host, port)
 
     async def rescan_connections(self):
         return await self._lookupd()
@@ -244,6 +331,23 @@ class Reader:
         await self.set_max_in_flight(0)
         # clear is_subscribed flag
         self._is_subscribe = False
+
+        # self._auto_poll_lookupd_task_closed = asyncio.Event(loop=self._loop)
+        # self._auto_poll_lookupd_task = None
+        try:
+            if self._auto_poll_lookupd_task is not None:
+                logger.info("canceling auto_poll_lookupd_task")
+                self._auto_poll_lookupd_task.cancel()
+                await asyncio.wait_for(
+                    self._auto_poll_lookupd_task_closed.wait(),
+                    timeout=10,
+                    loop=self._loop,
+                )
+        except Exception as e:
+            logger.error("cancel failed: {}".format(e))
+        finally:
+            logger.info("auto_poll_lookupd_task canceled")
+
         # send None to clear readers
         while self._num_readers > 0:
             for i in range(self._num_readers):

@@ -96,13 +96,23 @@ class Writer:
 
     async def connect(self):
         logger.debug("writer init connect")
-        self._conn = await create_connection(
-            self._host, self._port, self._queue, loop=self._loop
-        )
+        try:
+            self._conn = await create_connection(
+                self._host, self._port, self._queue, loop=self._loop
+            )
 
-        self._conn._on_message = self._on_message
-        await self._conn.identify(**self._config)
-        self._status = CONNECTED
+            self._conn._on_message = self._on_message
+            await self._conn.identify(**self._config)
+            self._status = CONNECTED
+        except Exception as e:
+            logger.error("connect failed! {}".format(e))
+            try:
+                if self._conn:
+                    self._conn.close()
+            except Exception as e:
+                logger.info("conn close failed, maybe its closed {}".format(e))
+            finally:
+                self._status = CLOSED
 
     def _on_message(self, msg):
         # should not be coroutine
