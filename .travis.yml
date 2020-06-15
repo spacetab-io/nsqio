@@ -1,7 +1,8 @@
 language: python
 python:
-    - 3.5
     - 3.6
+    - 3.7
+    - 3.8
 
 env:
     - NSQ_DOWNLOAD=nsq-0.2.30.linux-amd64.go1.2.1
