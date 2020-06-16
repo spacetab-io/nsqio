@@ -392,6 +392,7 @@ class Reader:
             if self._rdy_control is not None:
                 self._rdy_control.stop_working()
             # close all connections
+            #TODO: move to _rdy_control later
             for conn in self._connections.values():
                 if conn is not None:
                     try:
