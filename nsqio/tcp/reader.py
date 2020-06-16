@@ -242,7 +242,14 @@ class Reader:
                                     conn.close()
                                 except Exception as e:
                                     logger.error(e)
-
+                        finally:
+                            if not self._is_subscribe and conn is not None:
+                                try:
+                                    conn.close()
+                                except Exception as e:
+                                    logger.error(e)
+                        if not self._is_subscribe:
+                            break
                 t = next(timeout_generator)
                 await asyncio.sleep(t, loop=self._loop)
         except asyncio.CancelledError:
@@ -380,6 +387,10 @@ class Reader:
                 self._rdy_control.stop_working()
             # close all connections
             for conn in self._connections.values():
-                conn.close()
+                if conn is not None:
+                    try:
+                        conn.close()
+                    except Exception as e:
+                        logger.error(e)
         except Exception as e:
             logger.error("close failed: {}".format(e))
