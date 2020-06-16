@@ -329,7 +329,7 @@ class Reader:
     async def rescan_connections(self):
         return await self._lookupd()
 
-    async def unsubscribe(self):
+    async def unsubscribe(self, timeout=10):
         if not self._is_subscribe:
             logger.warning("You must subscribe to the topic first")
             return
@@ -356,10 +356,16 @@ class Reader:
             logger.info("auto_poll_lookupd_task canceled")
 
         # send None to clear readers
-        while self._num_readers > 0:
+        num_retries = 0
+        while self._num_readers > 0 or num_retries > 1000:
             for i in range(self._num_readers):
                 self._queue.put_nowait(None)
+            num_retries += 1
             await asyncio.sleep(0.05)
+        if self._num_readers > 0:
+            logger.error(
+                "{} retried {} times but still not work...".format(self, num_retries)
+            )
         # no subscribers now
 
         # clear & req rest of the messages
@@ -382,7 +388,7 @@ class Reader:
             await self.unsubscribe()
         try:
             # await self.send_cls()
-            # clear rdy_controls
+            # clear rdy_control
             if self._rdy_control is not None:
                 self._rdy_control.stop_working()
             # close all connections
@@ -390,7 +396,11 @@ class Reader:
                 if conn is not None:
                     try:
                         conn.close()
+                        await conn.wait_for_closed(1)
                     except Exception as e:
                         logger.error(e)
         except Exception as e:
             logger.error("close failed: {}".format(e))
+
+    def __repr__(self):
+        return "<Reader{}/{}>".format(self.topic, self.channel)
