@@ -347,7 +347,7 @@ class Reader:
                 self._auto_poll_lookupd_task.cancel()
                 await asyncio.wait_for(
                     self._auto_poll_lookupd_task_closed.wait(),
-                    timeout=10,
+                    timeout=timeout,
                     loop=self._loop,
                 )
         except Exception as e:
