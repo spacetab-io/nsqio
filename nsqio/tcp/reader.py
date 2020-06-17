@@ -9,7 +9,7 @@ from nsqio.http import NsqLookupd
 from nsqio.tcp.reader_rdy import RdyControl
 from nsqio.tcp.connection import create_connection
 from nsqio.tcp.consts import SUB, RDY, CLS
-from nsqio.utils import get_logger, get_host_and_port, retry_iterator
+from nsqio.utils import get_logger, get_host_and_port, retry_iterator, get_version
 
 
 logger = get_logger()
@@ -72,6 +72,7 @@ class Reader:
         log_level=None,
     ):
         self._config = {
+            "user_agent": "nsqio/{}".format(get_version()),
             "deflate": deflate,
             "deflate_level": deflate_level,
             "sample_rate": sample_rate,
@@ -181,6 +182,7 @@ class Reader:
                     conn = await create_connection(
                         host=p_host, port=p_port, queue=self._queue, loop=self._loop
                     )
+                    await self.prepare_conn(conn)
                     logger.debug("conn.id={}".format(conn.id))
                     self._connections[conn.id] = conn
                     self._rdy_control.add_connection(conn)
@@ -221,6 +223,7 @@ class Reader:
                                     loop=self._loop,
                                 )
                                 logger.debug("conn.id={}".format(conn.id))
+                                await self.prepare_conn(conn)
                                 self._connections[conn.id] = conn
                                 self._rdy_control.add_connection(conn)
 
@@ -392,7 +395,7 @@ class Reader:
             if self._rdy_control is not None:
                 self._rdy_control.stop_working()
             # close all connections
-            #TODO: move to _rdy_control later
+            # TODO: move to _rdy_control later
             for conn in self._connections.values():
                 if conn is not None:
                     try:

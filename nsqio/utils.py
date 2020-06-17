@@ -23,6 +23,11 @@ def get_host_and_port(host):
         return result[0], None
 
 
+def get_version():
+    from nsqio import __version__
+    return __version__
+
+
 def valid_topic_name(topic):
     if not 0 < len(topic) < 33:
         return False
