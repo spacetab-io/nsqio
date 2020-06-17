@@ -1,6 +1,7 @@
 import asyncio
 import json
 import ssl
+
 # import logging
 
 from collections import deque
@@ -20,6 +21,7 @@ from nsqio.tcp.exceptions import ProtocolError  # , make_error
 from nsqio.tcp.protocol import Reader, DeflateReader, SnappyReader
 
 logger = get_logger()
+
 
 async def create_connection(host="localhost", port=4150, queue=None, loop=None):
     """create nsq tcp connection
@@ -236,7 +238,7 @@ class TcpConnection:
             # useful during update to TLS, task canceled but connection
             # should not be closed
             return
-        print(f"{self.id} is read to end ,going to close")
+        logger.debug("{} is read to end, going to close".format(self.id))
         self._closing = True
         self._loop.call_soon(self._do_close, None)
 
