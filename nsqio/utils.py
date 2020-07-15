@@ -25,6 +25,7 @@ def get_host_and_port(host):
 
 def get_version():
     from nsqio import __version__
+
     return __version__
 
 
@@ -116,6 +117,9 @@ def retry_iterator(
         raise MaxRetriesExided()
 
 
+_logger = None
+
+
 def setup_logger(
     logfile=None,
     level=logging.DEBUG,
@@ -125,7 +129,8 @@ def setup_logger(
     fileLoglevel=None,
     disableStderrLogger=False,
 ):
-    logger = logzero.setup_logger(
+    global _logger
+    _logger = logzero.setup_logger(
         "nsqio",
         logfile=logfile,
         level=level,
@@ -135,8 +140,17 @@ def setup_logger(
         fileLoglevel=fileLoglevel,
         disableStderrLogger=disableStderrLogger,
     )
-    return logger
+    return _logger
+
+
+# initialize logger
+def _check_and_init_logger():
+    if _logger is None:
+        setup_logger()
+
+
+_check_and_init_logger()
 
 
 def get_logger():
-    return setup_logger()
+    return _logger
