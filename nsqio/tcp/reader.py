@@ -1,3 +1,8 @@
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from nsqio.tcp.connection import TcpConnection
+
 import asyncio
 import random
 import logging
@@ -91,11 +96,8 @@ class Reader:
         self._loop = loop or asyncio.get_event_loop()
         self._queue = asyncio.Queue(loop=self._loop)
 
-        self._connections = {}
-
         self._idle_timeout = 10
 
-        self._rdy_control = None
         self._max_in_flight = max_in_flight
         self._num_readers = 0
 
@@ -116,22 +118,23 @@ class Reader:
         logging.info("reader connecting")
         if self._lookupd_http_addresses:
             """
-            because lookupd must find a topic to find nsqds
-            so, lookupd connect changed in to subscribe func
+            since lookupd must find a topic to find nsqds, 
+            lookupd connect changed in to subscribe func
             """
             pass
         if self._nsqd_tcp_addresses:
+            connections = {}
             for host, port in self._nsqd_tcp_addresses:
-                conn = await create_connection(
+                conn: "TcpConnection" = await create_connection(
                     host, port, queue=self._queue, loop=self._loop
                 )
                 await self.prepare_conn(conn)
-                self._connections[conn.id] = conn
-            self._rdy_control.add_connections(self._connections)
+                connections[conn.id] = conn
+            self._rdy_control.add_connections(connections)
         # init distribute for conns, init update rdy state for conn
         self._rdy_control.redistribute()
 
-    async def prepare_conn(self, conn):
+    async def prepare_conn(self, conn: "TcpConnection"):
         conn._on_message = partial(self._on_message, conn)
         _ = await conn.identify(**self._config)
 
@@ -178,7 +181,7 @@ class Reader:
             try:
                 p_host, p_port = producer
                 tmp_id = "tcp://{}:{}".format(p_host, p_port)
-                if tmp_id not in self._connections:
+                if not await self._rdy_control._is_valid_connection(tmp_id):
                     logger.debug(
                         "new connection: host={}, port={}".format(p_host, p_port)
                     )
@@ -187,7 +190,7 @@ class Reader:
                     )
                     await self.prepare_conn(conn)
                     logger.debug("conn.id={}".format(conn.id))
-                    self._connections[conn.id] = conn
+                    # self._rdy_control.connections[conn.id] = conn
                     self._rdy_control.add_connection(conn)
             except Exception as e:
                 logger.error(e)
@@ -204,6 +207,7 @@ class Reader:
                 and self.channel is not None
             ):
                 logger.info("reader _auto_poll_lookupd check loop")
+
                 host, port = random.choice(self._lookupd_http_addresses)
                 producers = await self._poll_lookupd(host, port)
                 if len(producers) > 0:
@@ -213,7 +217,9 @@ class Reader:
                         try:
                             p_host, p_port = producer
                             tmp_id = "tcp://{}:{}".format(p_host, p_port)
-                            if tmp_id not in self._connections:
+                            # if tmp_id not in self._rdy_control.connections:
+                            # missing? add it!
+                            if not await self._rdy_control._is_valid_connection(tmp_id):
                                 logger.debug(
                                     "_auto_poll_lookupd: new connection: host={}, port={}".format(
                                         p_host, p_port
@@ -227,7 +233,7 @@ class Reader:
                                 )
                                 logger.debug("conn.id={}".format(conn.id))
                                 await self.prepare_conn(conn)
-                                self._connections[conn.id] = conn
+                                # self._rdy_control.connections[conn.id] = conn
                                 self._rdy_control.add_connection(conn)
 
                                 await self.sub(conn, self.topic, self.channel)
@@ -256,6 +262,7 @@ class Reader:
                                     logger.error(e)
                         if not self._is_subscribe:
                             break
+
                 t = next(timeout_generator)
                 await asyncio.sleep(t, loop=self._loop)
         except asyncio.CancelledError:
@@ -279,7 +286,7 @@ class Reader:
             )
 
         # and then, we sub all available topics
-        for conn in self._connections.values():
+        for conn in self._rdy_control.connections.values():
             await self.sub(conn, topic, channel)
             if conn._on_rdy_changed_cb is not None:
                 conn._on_rdy_changed_cb(conn.id)
@@ -294,14 +301,14 @@ class Reader:
         await conn.execute(SUB, topic, channel)
 
     async def set_max_in_flight(self, max_in_flight):
-        for conn in self._connections.values():
+        for conn in self._rdy_control.connections.values():
             await conn.execute(RDY, max_in_flight)
 
     async def send_cls(self):
         """ CLS 
             Cleanly close your connection (no more messages are sent)
         """
-        for conn in self._connections.values():
+        for conn in self._rdy_control.connections.values():
             await conn.execute(CLS)
 
     async def messages(self):
@@ -399,7 +406,7 @@ class Reader:
                 self._rdy_control.stop_working()
             # close all connections
             # TODO: move to _rdy_control later
-            for conn in self._connections.values():
+            for conn in self._rdy_control.connections.values():
                 if conn is not None:
                     try:
                         conn.close()

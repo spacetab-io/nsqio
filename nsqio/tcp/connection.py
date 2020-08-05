@@ -45,7 +45,16 @@ class TcpConnection:
     """
 
     def __init__(
-        self, reader, writer, host, port, *, on_message=None, queue=None, loop=None,
+        self,
+        reader,
+        writer,
+        host,
+        port,
+        *,
+        on_rdy_changed=None,
+        on_message=None,
+        queue=None,
+        loop=None,
     ):
         self._reader, self._writer = reader, writer
         self._host, self._port = host, port
@@ -64,6 +73,7 @@ class TcpConnection:
         # mark connection in upgrading state to ssl socket
         self._is_upgrading = False
         self._on_message = on_message
+        self._on_rdy_changed_cb = on_rdy_changed
         self._on_close = None
         self._on_close_flag = asyncio.Event(loop=self._loop)
 
@@ -130,6 +140,7 @@ class TcpConnection:
 
     def close(self):
         """Close connection."""
+        logger.debug("closing {}".format(self.id))
         self._do_close()
 
     async def identify(self, **config):
