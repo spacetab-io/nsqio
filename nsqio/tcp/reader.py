@@ -69,7 +69,6 @@ class Reader:
         deflate_level=6,
         sample_rate=0,
         consumer=False,
-        log_level=None,
     ):
         self._config = {
             "user_agent": "nsqio/{}".format(get_version()),

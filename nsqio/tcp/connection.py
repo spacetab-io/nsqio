@@ -45,16 +45,7 @@ class TcpConnection:
     """
 
     def __init__(
-        self,
-        reader,
-        writer,
-        host,
-        port,
-        *,
-        on_message=None,
-        queue=None,
-        loop=None,
-        log_level=None,
+        self, reader, writer, host, port, *, on_message=None, queue=None, loop=None,
     ):
         self._reader, self._writer = reader, writer
         self._host, self._port = host, port

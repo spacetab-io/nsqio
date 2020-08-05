@@ -21,7 +21,6 @@ async def create_writer(
     deflate_level=6,
     consumer=False,
     sample_rate=0,
-    log_level=None,
 ):
     """"
     param: host: host addr with no protocol. 127.0.0.1 
@@ -44,7 +43,6 @@ async def create_writer(
         snappy=snappy,
         deflate=deflate,
         deflate_level=deflate_level,
-        log_level=log_level,
         sample_rate=sample_rate,
         consumer=consumer,
         loop=loop,
@@ -69,7 +67,6 @@ class Writer:
         sample_rate=0,
         consumer=False,
         max_in_flight=42,
-        log_level=None,
     ):
         # TODO: add parameters type and value validation
         self._config = {
