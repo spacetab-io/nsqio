@@ -135,7 +135,7 @@ class RdyControl:
     async def _is_valid_connection(self, conn_id):
         conn = self._connections.get(conn_id, None)
         if not conn:
-            logger.warning("connection {} not found, skip...".format(conn_id))
+            logger.debug("connection {} not found, skip...".format(conn_id))
             return False
 
         if conn.closed:
