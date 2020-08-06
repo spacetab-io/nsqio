@@ -176,6 +176,7 @@ class Reader:
         producers = await self._poll_lookupd(host, port)
         if len(producers) == 0:
             # no producer
+            logger.warning("No producer detected")
             return False
         for producer in producers:
             try:
