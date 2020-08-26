@@ -280,8 +280,9 @@ class Reader:
         if self._lookupd_http_addresses:
             lookupd_status = await self._lookupd()
             if not lookupd_status:
-                logger.error("lookupd failed!")
-                return False
+                logger.warning("init lookupd failed! lookupd_http_addresses: {}".format(self._lookupd_http_addresses))
+                #TODO(yu): no need to return False for empty initialization
+                # return False
             self._auto_poll_lookupd_task = self._loop.create_task(
                 self._auto_poll_lookupd()
             )
