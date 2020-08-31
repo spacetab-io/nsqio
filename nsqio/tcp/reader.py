@@ -160,7 +160,7 @@ class Reader:
                     addrs.append((host, port))
                 return addrs
             else:
-                logger.error("producers not found error")
+                logger.debug("producers not found error")
                 return []
         except Exception as e:
             logger.error(e)
