@@ -1,5 +1,8 @@
 # nsqio
+
 [![Downloads](https://pepy.tech/badge/nsqio)](https://pepy.tech/project/nsqio)
+[![Downloads](https://pepy.tech/badge/nsqio/month)](https://pepy.tech/project/nsqio/month)
+[![Downloads](https://pepy.tech/badge/nsqio/week)](https://pepy.tech/project/nsqio/week)
 [![PyPI version](https://badge.fury.io/py/nsqio.svg)](https://badge.fury.io/py/nsqio)
 
 **if you dont like the pynsq(which use tornado) way to interact with nsq, then this library may be suitable for you**
