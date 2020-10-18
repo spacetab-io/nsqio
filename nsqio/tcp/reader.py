@@ -271,7 +271,7 @@ class Reader:
         finally:
             self._auto_poll_lookupd_task_closed.set()
 
-    async def subscribe(self, topic, channel):
+    async def subscribe(self, topic: str, channel: str):
         self.topic = topic
         self.channel = channel
         self._is_subscribe = True
@@ -280,8 +280,12 @@ class Reader:
         if self._lookupd_http_addresses:
             lookupd_status = await self._lookupd()
             if not lookupd_status:
-                logger.warning("init lookupd failed! lookupd_http_addresses: {}".format(self._lookupd_http_addresses))
-                #TODO(yu): no need to return False for empty initialization
+                logger.warning(
+                    "init lookupd failed! lookupd_http_addresses: {}".format(
+                        self._lookupd_http_addresses
+                    )
+                )
+                # TODO(yu): no need to return False for empty initialization
                 # return False
             self._auto_poll_lookupd_task = self._loop.create_task(
                 self._auto_poll_lookupd()
@@ -299,7 +303,7 @@ class Reader:
         # self._redistribute_task = self._loop.create_task(self._redistribute())
         return True
 
-    async def sub(self, conn, topic, channel):
+    async def sub(self, conn: TcpConnection, topic: str, channel: str):
         await conn.execute(SUB, topic, channel)
 
     async def set_max_in_flight(self, max_in_flight):
@@ -376,7 +380,7 @@ class Reader:
             for i in range(self._num_readers):
                 self._queue.put_nowait(None)
             num_retries += 1
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.05, loop=self._loop)
         if self._num_readers > 0:
             logger.error(
                 "{} retried {} times but still not work...".format(self, num_retries)

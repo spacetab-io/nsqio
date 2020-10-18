@@ -85,7 +85,7 @@ class TcpConnection:
         self._send_magic()
         logger.info("connect: {}:{}".format(self._host, self._port))
 
-    def execute(self, command, *args, data=None, cb=None):
+    def execute(self, command: bytes, *args, data=None, cb=None):
         """XXX"""
         assert (
             self._reader and not self._reader.at_eof()

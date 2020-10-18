@@ -130,7 +130,7 @@ class RdyControl:
 
         rdy_coros = [conn.execute(RDY, 1) for conn in random_connections]
 
-        await asyncio.gather(*rdy_coros)
+        await asyncio.gather(*rdy_coros, loop=self._loop)
 
     async def _is_valid_connection(self, conn_id):
         conn = self._connections.get(conn_id, None)
