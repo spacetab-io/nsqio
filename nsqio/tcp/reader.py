@@ -303,7 +303,7 @@ class Reader:
         # self._redistribute_task = self._loop.create_task(self._redistribute())
         return True
 
-    async def sub(self, conn: TcpConnection, topic: str, channel: str):
+    async def sub(self, conn: "TcpConnection", topic: str, channel: str):
         await conn.execute(SUB, topic, channel)
 
     async def set_max_in_flight(self, max_in_flight):
