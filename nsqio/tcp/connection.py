@@ -304,4 +304,7 @@ class TcpConnection:
         self._is_upgrading = False
 
     def __repr__(self):
-        return "<TcpConnection: {}:{}>".format(self._host, self._port)
+        return "<TcpConnection: {}:{} ~{}>".format(
+            self._host, self._port, self._in_flight
+        )
+

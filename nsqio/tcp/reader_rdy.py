@@ -16,10 +16,10 @@ NOOP = 2
 
 
 class RdyControl:
-    def __init__(self, idle_timeout, max_in_flight, loop=None):
+    def __init__(self, idle_timeout: int, max_in_flight: int, loop=None):
         self._connections: "Dict[str, TcpConnection]" = {}
-        self._idle_timeout = idle_timeout
-        self._total_ready_count = 0
+        self._idle_timeout: int = idle_timeout
+        self._total_ready_count: int = 0
         self._max_in_flight = max_in_flight
         self._loop = loop or asyncio.get_event_loop()
 
@@ -32,10 +32,10 @@ class RdyControl:
         self._distributor_task = self._loop.create_task(self._distributor())
 
     @property
-    def connections(self):
+    def connections(self) -> "Dict[str, TcpConnection]":
         return self._connections
 
-    def add_connections(self, connections):
+    def add_connections(self, connections: "Dict[str, TcpConnection]"):
         prev_connections = self._connections
         self._connections = connections
         for conn in self._connections.values():
@@ -112,6 +112,8 @@ class RdyControl:
             logger.warning("no valid connectionss.., skip...")
             return
 
+        # logger.warning("_redistribute_rdy_state ~~~ ")
+
         connections = self._connections.values()
         # disable for further deprecate
 
@@ -150,9 +152,10 @@ class RdyControl:
                 return False
         return True
 
-    async def _update_rdy(self, conn_id):
+    async def _update_rdy(self, conn_id: str):
         logger.debug("_update_rdy :{}".format(conn_id))
         if not await self._is_valid_connection(conn_id):
+            logger.warning("{}: invalid connection!!".format(conn_id))
             return
 
         conn = self._connections[conn_id]
@@ -165,4 +168,6 @@ class RdyControl:
 
         # get the max rdy state for conn
         rdy_state = int(max(1, base_conn_max_in_flight - conn_in_flight))
+
+        logger.debug("_update_rdy :{} => {}".format(conn_id, rdy_state))
         await conn.execute(RDY, rdy_state)

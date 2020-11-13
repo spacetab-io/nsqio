@@ -16,6 +16,7 @@ class NsqMessage(BaseMessage):
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls, *args, **kwargs)
         self._is_processed = False
+        self._processed_hook = None
         return self
 
     @property
@@ -31,6 +32,8 @@ class NsqMessage(BaseMessage):
             logger.warning("{} has already been processed".format(self))
             return None
         resp = await self.conn.execute(FIN, self.message_id)
+        if self._processed_hook:
+            self._processed_hook(self)
         self._is_processed = True
         return resp
 
@@ -45,6 +48,8 @@ class NsqMessage(BaseMessage):
             logger.warning("{} has already been processed".format(self))
             return None
         resp = await self.conn.execute(REQ, self.message_id, timeout)
+        if self._processed_hook:
+            self._processed_hook(self)
         self._is_processed = True
         return resp
 

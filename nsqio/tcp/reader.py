@@ -1,7 +1,9 @@
-from typing import TYPE_CHECKING
+from asyncio.events import AbstractEventLoop
+from typing import Dict, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from nsqio.tcp.connection import TcpConnection
+    from nsqio.tcp.messages import NsqMessage
 
 import asyncio
 import random
@@ -64,8 +66,8 @@ class Reader:
         self,
         nsqd_tcp_addresses=None,
         lookupd_http_addresses=None,
-        max_in_flight=42,
-        loop=None,
+        max_in_flight: int = 42,
+        loop: Optional[AbstractEventLoop] = None,
         heartbeat_interval=30000,
         feature_negotiation=True,
         tls_v1=False,
@@ -74,11 +76,15 @@ class Reader:
         deflate_level=6,
         sample_rate=0,
         consumer=False,
-        user_agent="",
+        user_agent: str = "",
+        msg_timeout: Optional[int] = None,
+        client_id: str = "",
+        hostname: str = "",
     ):
         user_agents = ["nsqio/{}".format(get_version())]
         if user_agent:
             user_agents.append(user_agent)
+
         self._config = {
             "user_agent": " ".join(user_agents),
             "deflate": deflate,
@@ -89,11 +95,21 @@ class Reader:
             "heartbeat_interval": heartbeat_interval,
             "feature_negotiation": feature_negotiation,
         }
+
+        if msg_timeout:
+            self._config["msg_timeout"] = msg_timeout
+
+        if client_id:
+            self._config["client_id"] = client_id
+
+        if hostname:
+            self._config["hostname"] = hostname
+
         self._nsqd_tcp_addresses = nsqd_tcp_addresses or []
         self._lookupd_http_addresses = lookupd_http_addresses or []
 
         self._max_in_flight = max_in_flight
-        self._loop = loop or asyncio.get_event_loop()
+        self._loop: AbstractEventLoop = loop or asyncio.get_event_loop()
         self._queue = asyncio.Queue(loop=self._loop)
 
         self._idle_timeout = 10
@@ -123,7 +139,7 @@ class Reader:
             """
             pass
         if self._nsqd_tcp_addresses:
-            connections = {}
+            connections: "Dict[str, TcpConnection]" = {}
             for host, port in self._nsqd_tcp_addresses:
                 conn: "TcpConnection" = await create_connection(
                     host, port, queue=self._queue, loop=self._loop
@@ -138,10 +154,11 @@ class Reader:
         conn._on_message = partial(self._on_message, conn)
         _ = await conn.identify(**self._config)
 
-    def _on_message(self, conn, msg):
+    def _on_message(self, conn: "TcpConnection", msg: "NsqMessage"):
         conn._last_message = time.time()
         if conn._on_rdy_changed_cb is not None:
             conn._on_rdy_changed_cb(conn.id)
+        msg._processed_hook = lambda m: conn._on_rdy_changed_cb(conn.id)
         return msg
 
     async def _poll_lookupd(self, host, port):
@@ -200,7 +217,7 @@ class Reader:
 
     async def _auto_poll_lookupd(self):
         logger.debug("starting _auto_poll_lookupd")
-        timeout_generator = retry_iterator(init_delay=1, max_delay=30.0)
+        timeout_generator = retry_iterator(init_delay=3, max_delay=30.0)
         try:
             while (
                 self._is_subscribe
@@ -264,6 +281,10 @@ class Reader:
                         if not self._is_subscribe:
                             break
 
+                try:
+                    self._rdy_control.redistribute()
+                except Exception as e:
+                    logger.warning("redistribute failed!! {}".format(e))
                 t = next(timeout_generator)
                 await asyncio.sleep(t, loop=self._loop)
         except asyncio.CancelledError:
