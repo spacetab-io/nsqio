@@ -126,8 +126,7 @@ class Writer:
         return self._last_message
 
     async def reconnect(self):
-        logger.debug("writer reconnect")
-        logger.debug(self._status)
+        logger.debug("{} writer reconnect, status: {}".format(self, self._status))
         try:
             if self._conn:
                 self._conn.close()
@@ -146,7 +145,7 @@ class Writer:
                 if not (self._status == CONNECTED or self._status == INIT):
                     logger.debug(f"writer close({self._status})detected,reconnect")
                     conn_id = self.id if self._conn else "init"
-                    logger.info("reconnect writer{}".format(conn_id))
+                    logger.info("{} reconnect writer{}".format(self, conn_id))
                     try:
                         await self.reconnect()
                     except ConnectionError:
@@ -170,7 +169,7 @@ class Writer:
 
     async def execute(self, command, *args, data=None):
         if self._conn.closed:
-            logger.debug(f"execute found conn closed, reconnect()")
+            logger.info("{} execute found conn closed, reconnect()".format(self))
             await self.reconnect()
         response = self._conn.execute(command, *args, data=data)
         return await response

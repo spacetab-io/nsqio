@@ -313,7 +313,8 @@ class Reader:
             )
 
         # and then, we sub all available topics
-        for conn in self._rdy_control.connections.values():
+        conns = self._rdy_control.connections.values()
+        for conn in conns:
             await self.sub(conn, topic, channel)
             if conn._on_rdy_changed_cb is not None:
                 conn._on_rdy_changed_cb(conn.id)

@@ -1,4 +1,5 @@
 import asyncio
+from asyncio.streams import StreamWriter, StreamReader
 import json
 import ssl
 
@@ -23,7 +24,9 @@ from nsqio.tcp.protocol import Reader, DeflateReader, SnappyReader
 logger = get_logger()
 
 
-async def create_connection(host="localhost", port=4150, queue=None, loop=None):
+async def create_connection(
+    host: str = "localhost", port: int = 4150, queue=None, loop=None
+):
     """create nsq tcp connection
     Args:
         host: host address
@@ -46,10 +49,10 @@ class TcpConnection:
 
     def __init__(
         self,
-        reader,
-        writer,
-        host,
-        port,
+        reader: StreamReader,
+        writer: StreamWriter,
+        host: str,
+        port: int,
         *,
         on_rdy_changed=None,
         on_message=None,
@@ -100,9 +103,8 @@ class TcpConnection:
             fut.set_result(b"OK")
         else:
             self._cmd_waiters.append((fut, cb))
-
         command_raw = self._parser.encode_command(command, *args, data=data)
-        logger.debug("execute command %s" % command_raw)
+        logger.debug("execute command {}".format(command_raw))
         self._writer.write(command_raw)
 
         # track all processed and requeued messages
