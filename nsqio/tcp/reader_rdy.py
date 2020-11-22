@@ -69,8 +69,12 @@ class RdyControl:
                 RuntimeError("Should never be here")
 
     def remove_connection(self, conn: "TcpConnection"):
-        self._connections.pop(conn.id)
-        conn.close()
+        try:
+            if conn is not None and conn.id in self._connections:
+                self._connections.pop(conn.id)
+            conn.close()
+        except Exception as e:
+            logger.error("remove connection {} failed: {}".format(conn, e))
 
     def remove_all(self):
         prev_connections = self._connections
@@ -142,8 +146,9 @@ class RdyControl:
 
         if conn.closed:
             try:
+                # TODO TypeError: object NoneType can't be used in 'await' expression
                 logger.warning("connection {} closed, removing..".format(conn))
-                await self.remove_connection(conn)
+                self.remove_connection(conn)
             except Exception as e:
                 logger.error(
                     "remove_connectionfailed: {}\n{}".format(e, traceback.format_exc())
