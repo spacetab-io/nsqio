@@ -60,6 +60,7 @@ class TcpConnection:
         loop=None,
     ):
         self._reader, self._writer = reader, writer
+        self._raw_writer_transport = self._writer.transport
         self._host, self._port = host, port
 
         self._loop = loop or asyncio.get_event_loop()
@@ -128,7 +129,29 @@ class TcpConnection:
     def closed(self):
         """True if connection is closed."""
         closed = self._closing or self._closed
-        if not closed and self._reader and self._reader.at_eof():
+        conn_lost = False
+        if self._raw_writer_transport is None:
+            logger.warning("_raw_writer_transport is None!!")
+            conn_lost = True
+        elif (
+            self._raw_writer_transport._conn_lost
+        ):  # it may indices some error for the value > 0
+            logger.warning("_raw_writer_transport._conn_lost detected")
+            conn_lost = True
+        elif self._writer is None:
+            logger.warning("_writer is None!!")
+            conn_lost = True
+        elif self._writer.transport._conn_lost:
+            logger.warning("_writer.transport._conn_lost detected")
+            conn_lost = True
+
+        if conn_lost:
+            logger.warning("conn is LOST!!!")
+        else:
+            logger.debug(
+                "{} i am fine! {} ".format(self, self._raw_writer_transport._conn_lost)
+            )
+        if not closed and (self._reader and self._reader.at_eof() or conn_lost):
             self._closing = closed = True
             self._loop.call_soon(self._do_close, None)
         return closed
@@ -182,9 +205,23 @@ class TcpConnection:
     def _send_magic(self):
         self._writer.write(MAGIC_V2)
 
+    def drain(self):
+        self._loop.create_task(self._drain())
+
+    async def _drain(self):
+        try:
+            # logger.warning("drain....")
+            await self._writer.drain()
+            logger.debug("drained.... OK")
+        except Exception as e:
+            logger.warning("{} drain writer failed!!! {}".format(self, e))
+            self._do_close(e)
+
     def _pulse(self):
+        # logger.info("_pulse")
         nop = self._parser.encode_command(b"NOP")
         self._writer.write(nop)
+        self._loop.create_task(self._drain())
 
     async def _upgrade_to_tls(self):
         self._reader_task.cancel()
