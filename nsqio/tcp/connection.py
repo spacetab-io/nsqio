@@ -346,4 +346,3 @@ class TcpConnection:
         return "<TcpConnection: {}:{} ~{}>".format(
             self._host, self._port, self._in_flight
         )
-

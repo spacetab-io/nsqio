@@ -13,6 +13,7 @@ def run_until_complete(fun):
         loop = test.loop
         ret = loop.run_until_complete(fun(test, *args, **kw))
         return ret
+
     return wrapper
 
 
