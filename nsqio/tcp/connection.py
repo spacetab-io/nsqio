@@ -2,8 +2,7 @@ import asyncio
 from asyncio.streams import StreamWriter, StreamReader
 import json
 import ssl
-
-# import logging
+import logging
 
 from collections import deque
 
@@ -17,11 +16,10 @@ from nsqio.tcp.consts import (
 )
 
 from nsqio.tcp.messages import NsqMessage
-from nsqio.utils import get_logger
 from nsqio.tcp.exceptions import ProtocolError  # , make_error
 from nsqio.tcp.protocol import Reader, DeflateReader, SnappyReader
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 async def create_connection(

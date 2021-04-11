@@ -1,9 +1,10 @@
 import json
 import aiohttp
-from nsqio.utils import _convert_to_str, get_logger
+import logging
+from nsqio.utils import _convert_to_str
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class NsqHTTPConnection:

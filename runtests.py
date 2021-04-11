@@ -30,7 +30,9 @@ import unittest
 import traceback
 import textwrap
 import importlib.machinery
-from nsqio.utils import get_logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 try:
     import coverage
@@ -285,7 +287,6 @@ def runtests():
         cov.start()
 
     finder = TestsFinder(args.testsdir, includes, excludes, verbose=args.verbose)
-    logger = get_logger(level=logging.DEBUG)
     if catchbreak:
         installHandler()
     try:

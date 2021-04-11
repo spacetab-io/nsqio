@@ -16,10 +16,10 @@ from nsqio.http import NsqLookupd
 from nsqio.tcp.reader_rdy import RdyControl
 from nsqio.tcp.connection import create_connection
 from nsqio.tcp.consts import SUB, RDY, CLS
-from nsqio.utils import get_logger, get_host_and_port, retry_iterator, get_version
+from nsqio.utils import get_host_and_port, retry_iterator, get_version
 
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 async def create_reader(
@@ -38,6 +38,7 @@ async def create_reader(
     """
     loop = loop or asyncio.get_event_loop()
     if lookupd_http_addresses:
+        lookupd_http_addresses = [get_host_and_port(i) for i in lookupd_http_addresses]
         reader = Reader(
             lookupd_http_addresses=lookupd_http_addresses,
             max_in_flight=max_in_flight,
@@ -75,7 +76,6 @@ class Reader:
         deflate=False,
         deflate_level=6,
         sample_rate=0,
-        consumer=False,
         user_agent: str = "",
         msg_timeout: Optional[int] = None,
         client_id: str = "",

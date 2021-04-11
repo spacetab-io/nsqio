@@ -1,4 +1,3 @@
-from nsqio.tcp.connection import logger
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -8,12 +7,14 @@ if TYPE_CHECKING:
 import asyncio
 import random
 import traceback
+import logging
 from nsqio.tcp.consts import RDY
 
 REDISTRIBUTE = 0
 CHANGE_CONN_RDY = 1
 NOOP = 2
 
+logger = logging.getLogger(__name__)
 
 class RdyControl:
     def __init__(self, idle_timeout: int, max_in_flight: int, loop=None):

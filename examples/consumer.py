@@ -1,8 +1,9 @@
 import asyncio
+import logging
 from nsqio import create_reader
-from nsqio.utils import get_logger
 
-logger = get_logger()
+
+logger = logging.getLogger(__name__)
 
 
 def main():

@@ -1,7 +1,5 @@
 import random
 import re
-import logzero
-import logging
 from urllib.parse import urlparse
 
 TOPIC_NAME_RE = re.compile(r"^[\.a-zA-Z0-9_-]+$")
@@ -115,42 +113,3 @@ def retry_iterator(
         yield delay
     else:
         raise MaxRetriesExided()
-
-
-_logger = None
-
-
-def setup_logger(
-    logfile=None,
-    level=logging.DEBUG,
-    formatter=None,
-    maxBytes=0,
-    backupCount=0,
-    fileLoglevel=None,
-    disableStderrLogger=False,
-):
-    global _logger
-    _logger = logzero.setup_logger(
-        "nsqio",
-        logfile=logfile,
-        level=level,
-        formatter=formatter,
-        maxBytes=maxBytes,
-        backupCount=backupCount,
-        fileLoglevel=fileLoglevel,
-        disableStderrLogger=disableStderrLogger,
-    )
-    return _logger
-
-
-# initialize logger
-def _check_and_init_logger():
-    if _logger is None:
-        setup_logger()
-
-
-_check_and_init_logger()
-
-
-def get_logger():
-    return _logger

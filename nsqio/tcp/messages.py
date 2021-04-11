@@ -1,6 +1,6 @@
+import logging
 from collections import namedtuple
 from nsqio.tcp.consts import TOUCH, REQ, FIN
-from nsqio.utils import get_logger
 
 
 __all__ = ["NsqMessage", "NsqErrorMessage"]
@@ -9,7 +9,7 @@ __all__ = ["NsqMessage", "NsqErrorMessage"]
 NsqErrorMessage = namedtuple("NsqError", ["code", "msg"])
 BaseMessage = namedtuple("NsqMessage", "timestamp attempts message_id body conn")
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class NsqMessage(BaseMessage):

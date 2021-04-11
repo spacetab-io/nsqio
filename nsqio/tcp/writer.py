@@ -1,11 +1,11 @@
 import asyncio
 import time
+import logging
 from nsqio.utils import retry_iterator
 from nsqio.tcp.connection import create_connection
 from nsqio.tcp.consts import MPUB, PUB, SUB, AUTH, DPUB, INIT, CONNECTED, CLOSED
-from nsqio.utils import get_logger
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 async def create_writer(
@@ -19,8 +19,7 @@ async def create_writer(
     snappy=False,
     deflate=False,
     deflate_level=6,
-    consumer=False,
-    sample_rate=0,
+    sample_rate=0
 ):
     """"
     param: host: host addr with no protocol. 127.0.0.1 
@@ -44,7 +43,6 @@ async def create_writer(
         deflate=deflate,
         deflate_level=deflate_level,
         sample_rate=sample_rate,
-        consumer=consumer,
         loop=loop,
     )
     await writer.connect()
@@ -64,9 +62,7 @@ class Writer:
         snappy=False,
         deflate=False,
         deflate_level=6,
-        sample_rate=0,
-        consumer=False,
-        max_in_flight=42,
+        sample_rate=0
     ):
         # TODO: add parameters type and value validation
         self._config = {

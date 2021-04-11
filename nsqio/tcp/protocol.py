@@ -18,9 +18,9 @@ from nsqio.tcp.consts import (
 )
 
 from nsqio.tcp.exceptions import ProtocolError
-from nsqio.utils import _convert_to_bytes, get_logger
+from nsqio.utils import _convert_to_bytes
 
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 __all__ = ["Reader", "DeflateReader", "SnappyReader"]

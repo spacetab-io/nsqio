@@ -61,8 +61,10 @@ All you need is a loop, then enjoy. you can refer to examples, as well.
 Consumer:
 
 ```python
+import logging
 from nsqio import create_reader
-from nsqio.utils import get_logger
+
+logger = logging.getLogger(__name__)
 
 loop = asyncio.get_event_loop()
 async def go():
@@ -75,7 +77,7 @@ async def go():
             print(message.body)
             await message.fin()
     except Exception as tmp:
-        self.logger.exception(tmp)
+        logger.exception(tmp)
 loop.run_until_complete(go())
 ```
 
