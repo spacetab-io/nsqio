@@ -6,6 +6,7 @@ import abc
 import struct
 import zlib
 import snappy
+import logging
 
 from nsqio.tcp.consts import (
     DATA_SIZE,
